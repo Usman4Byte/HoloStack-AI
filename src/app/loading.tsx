@@ -1,0 +1,1 @@
+export default function Loading() { return <main className="fallback-page" aria-busy="true" aria-label="Loading workspace"><div className="loading-skeleton" /><div className="loading-skeleton short" /><p>Preparing your workspace…</p></main>; }
