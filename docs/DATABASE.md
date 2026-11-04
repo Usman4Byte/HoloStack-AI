@@ -1,10 +1,10 @@
 # TiDB verification and persistence decision
 
-Verified on 2026-11-03 and rechecked on 2026-11-04 against the user's actual PostgreSQL-compatible TiDB Cloud Starter instance in `us-east-1`, using the `holostackdb` database. The reviewed `0000_workspace_foundation.sql` and additive `0001_ai_workflows.sql` migrations have been applied to the `holostack` schema after disposable-schema verification. Re-running the migrations verified their hashes and safely skipped already-applied DDL.
+Verified on 2026-11-03 and rechecked on 2026-11-04 against the user's actual PostgreSQL-compatible TiDB Cloud Starter instance in `us-east-1`, using the `holostackdb` database. The reviewed `0000_workspace_foundation.sql`, `0001_ai_workflows.sql`, and `0002_intelligence_runs.sql` migrations have been applied to the `holostack` schema after disposable-schema verification. Re-running the migrations verified their hashes and safely skipped already-applied DDL.
 
 ## Evidence
 
-`npm run db:check` passed a real `SELECT 1` through `pg` with certificate verification enabled. `npm run db:verify` passed all 13 checks and cleaned up its randomly named probe schema. Before applying the AI-workflow migration, `npm run db:verify-schema` exercised both exact migrations, repeated the Drizzle ledger, validated `FOR UPDATE`, ran eight concurrent atomic counter updates, and ran eight concurrent AI quota reservations in a separate disposable schema; exactly three user reservations succeeded and the scratch schema was removed. The checked-in migration was then applied to the real database:
+`npm run db:check` passed a real `SELECT 1` through `pg` with certificate verification enabled. `npm run db:verify` passed all 13 checks and cleaned up its randomly named probe schema. Before applying the Module 5 intelligence migration, `npm run db:verify-schema` exercised all exact migrations, repeated the Drizzle ledger, validated `FOR UPDATE`, ran eight concurrent atomic counter updates, ran eight concurrent AI quota reservations (exactly three user reservations succeeded), and confirmed one winner for eight identical in-flight requests in a separate disposable schema. The scratch schema was removed. The checked-in migration was then applied to the real database:
 
 | Capability | Observed result |
 | --- | --- |
@@ -26,7 +26,7 @@ The full local evidence is `.local/db-verification.json`; exact application DDL 
 
 ## Selected implementation
 
-Use **Drizzle ORM with its node-postgres adapter**, over the server-only bounded `pg` pool. Use explicit, reviewed SQL migration files and the tested Drizzle migration ledger. Do not use automatic schema push or rely on unverified catalog introspection. The foundation migration was applied in Milestone 2; the additive AI-workflow migration was verified in scratch and applied in Module 4. Before adding migrations or changing database targets, repeat the actual connection, compatibility, exact-DDL, and migration review steps. `npm run db:migrate` checks the target, report freshness, and migration hash before running.
+Use **Drizzle ORM with its node-postgres adapter**, over the server-only bounded `pg` pool. Use explicit, reviewed SQL migration files and the tested Drizzle migration ledger. Do not use automatic schema push or rely on unverified catalog introspection. The foundation migration was applied in Milestone 2; the additive AI workflow and intelligence-run migrations were verified in scratch and applied in Modules 4 and 5. Before adding migrations or changing database targets, repeat the actual connection, compatibility, exact-DDL, and migration review steps. `npm run db:migrate` checks the target, report freshness, and migration hash before running.
 
 Use application-generated UUIDs, ordinary foreign keys, B-tree indexes, JSONB graph documents, and revision-conditional writes. Proposed workspace/auth/project schema is in `ARCHITECTURE.md`. Keep DDL under one controlled operator, not concurrent serverless requests.
 

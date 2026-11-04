@@ -2,19 +2,21 @@
 
 ## One deployable application
 
-Next.js App Router, React, strict TypeScript, Tailwind CSS, local shadcn-style primitives, Lucide, XYFlow, and Zod. Node.js Route Handlers own future auth, persistence, and model calls. No Express process, durable in-process state, persistent WebSockets, or background work inside request handlers.
+Next.js App Router, React, strict TypeScript, Tailwind CSS, local shadcn-style primitives, Lucide, XYFlow, and Zod. Node.js Route Handlers own auth, persistence, intelligence runs, and explicit model calls. No Express process, durable in-process state, persistent WebSockets, or background work inside request handlers.
 
 The public sample at `/` deliberately uses client state only. Signed-in dashboards and project editors use the bounded server-only database pool and durable TiDB records. No durable application state is held in process memory. The public health endpoint proves only that the application serves requests.
 
 ## Domain boundary
 
-The graph schema rejects duplicate identifiers, missing edge references, self connections, unsupported types, unknown properties, invalid capacity values, and oversized graphs. Multi-node cycles are valid software architecture; future ScaleLab must explicitly detect/bound cyclic propagation. JSON import and AI output use strict schema checks; AI content receives a second graph-integrity validation after parsing.
+The graph schema rejects duplicate identifiers, missing edge references, self connections, unsupported types, unknown properties, invalid capacity values, and oversized graphs. Multi-node cycles are valid software architecture; ScaleLab propagates load with a strict iteration and per-node cap and reports when a loop does not converge. JSON import and AI output use strict schema checks; AI content receives a second graph-integrity validation after parsing.
 
 ## Persistence implementation (Milestone 2)
 
 The reviewed first Drizzle SQL migration is applied in the TiDB `holostack` schema. It creates `users`, `sessions`, `workspaces`, `workspace_members`, `projects`, `architecture_versions`, `rate_limits`, and `usage_events`, using application-generated UUIDs and tested SQL types. JSONB holds validated graphs; relational columns hold tenant scope, revision, metadata, and timestamps. Optimistic writes include both tenant ownership and the expected revision in their predicate; a stale revision becomes HTTP 409. Tenant keys cannot be accepted as authority from the browser. Project editors debounce graph and metadata writes and retain drafts after conflicts.
 
 The additive `0001_ai_workflows.sql` migration adds tenant-scoped AI action logs, daily quota counters, candidate artifacts, and conversation messages. AI outputs remain ordinary JSONB project data; no prompts or API keys are put in the usage ledger. Foreign keys and B-tree indexes match tested operations. No reliance on extensions, triggers, vector indexes, or SERIALIZABLE isolation.
+
+The additive `0002_intelligence_runs.sql` migration stores deterministic workload inputs and results, review findings, project revision, and scenario name in a tenant-scoped table. Saves lock the project row and compare the caller's expected revision before computing and persisting, so a run is tied to the exact saved graph. Recent runs are scoped to the authenticated actor and workspace.
 
 ## Authentication implementation
 
@@ -26,7 +28,13 @@ The Gemini SDK exists only behind `src/server/ai/provider.ts` and `server-only`;
 
 Generation and optimization return saved candidate artifacts. Copilot messages are saved per project. A deterministic local patch applier constructs and validates proposals; a deterministic graph diff and before/after diagrams run with no model call. Only explicit user approval loads a candidate into HoloCanvas, where the existing revision-aware autosave records a normal project version. The AI cannot mutate infrastructure, measure performance, or silently overwrite a saved graph. See `AI_INTEGRATION.md` for external data-sharing and Google free-tier limits. The account key/model is not probed on page load; actual model access remains unverified until a user-requested provider call succeeds.
 
-Authored templates remain a separate zero-AI sample mode. ScaleLab and deterministic risk analysis are future Module 5 features and must remain TypeScript-only; an AI optimization prompt is explicitly told that formal risk findings are not available yet.
+Authored templates remain a separate zero-AI sample mode. ScaleLab and deterministic risk analysis are TypeScript-only. The review evaluates explicit rules and returns evidence, recommendation, confidence, and assumptions without a composite risk score. AI optimization stays user-initiated; no findings are placed in the prompt unless explicitly requested and supplied.
+
+## Deterministic intelligence (Module 5)
+
+ScaleLab chooses the higher of direct RPS and `concurrent users × requests per user per minute ÷ 60`, then propagates read/write requests across directed graph edges using each edge multiplier. Cache assumptions reduce downstream reads only. Node capacity is `maxRps × replicas`; utilization, headroom, and warnings are estimates. Feedback loops use bounded fixed-point iteration with per-node caps and visibly flag non-convergence. Sliders and presets recalculate in the browser and never call Gemini.
+
+The rule review checks modeled trust boundaries, authentication/observability presence, single modeled database replicas, read-heavy cache opportunities, synchronous fanout, and text-indicated background work. Every finding carries category, severity, evidence, confidence, assumptions, and a recommendation; absence of a finding is not a safety claim. Markdown report export and graph rendering are local. Version restore writes a new revision and preserves the current state; stale expected revisions are rejected.
 
 ## Later modules
 

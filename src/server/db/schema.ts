@@ -65,3 +65,9 @@ export const aiMessages = app.table("ai_messages", {
   usageId: uuid("usage_id").notNull().references(() => aiUsageRecords.id), role: text("role").notNull(), content: text("content").notNull(),
   createdAt: time("created_at"),
 }, t => [index("ai_messages_project_time_idx").on(t.projectId, t.createdAt)]);
+export const intelligenceRuns = app.table("intelligence_runs", {
+  id: uuid("id").primaryKey(), workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id),
+  userId: uuid("user_id").notNull().references(() => users.id), projectId: uuid("project_id").notNull().references(() => projects.id),
+  graphRevision: integer("graph_revision").notNull(), name: text("name").notNull(), workload: jsonb("workload").notNull(),
+  capacity: jsonb("capacity").notNull(), findings: jsonb("findings").notNull(), createdAt: time("created_at"),
+}, t => [index("intelligence_project_time_idx").on(t.projectId, t.createdAt), index("intelligence_workspace_time_idx").on(t.workspaceId, t.createdAt)]);

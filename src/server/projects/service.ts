@@ -8,6 +8,7 @@ import { type Actor, requireWriter } from "@/server/auth/session";
 import { ApiError } from "@/server/http/errors";
 import { architectureSchema, type Architecture } from "@/domain/architecture/schema";
 import { templates } from "@/domain/architecture/templates";
+import { architectureDiff } from "@/domain/ai/architecture";
 import { createProjectSchema, updateProjectSchema, listProjectsSchema, projectIdSchema, type ProjectDocument, type ProjectSummary } from "@/domain/projects/schema";
 
 type Db = ReturnType<typeof getDb>;
@@ -87,4 +88,28 @@ export async function projectVersions(actor: Actor, id: string) {
   return getDb().select({ revision: architectureVersions.revision, name: architectureVersions.name, change: architectureVersions.change, createdAt: architectureVersions.createdAt }).from(architectureVersions)
     .where(and(eq(architectureVersions.projectId, id), eq(architectureVersions.workspaceId, actor.workspaceId)))
     .orderBy(desc(architectureVersions.revision)).limit(20);
+}
+
+export async function compareProjectVersion(actor: Actor, id: string, revision: number) {
+  const current = await getProject(actor, id);
+  const [snapshotRow] = await getDb().select().from(architectureVersions).where(and(eq(architectureVersions.projectId, id), eq(architectureVersions.workspaceId, actor.workspaceId), eq(architectureVersions.revision, revision))).limit(1);
+  if (!snapshotRow) throw new ApiError(404, "Architecture version not found.");
+  return { fromRevision: revision, toRevision: current.revision, graph: architectureDiff(architectureSchema.parse(snapshotRow.graph), current.graph), fields: { nameChanged: snapshotRow.name !== current.name, descriptionChanged: snapshotRow.description !== current.description, notesChanged: snapshotRow.notes !== current.notes } };
+}
+
+export async function restoreProjectVersion(actor: Actor, id: string, targetRevision: number, expectedRevision: number) {
+  requireWriter(actor); validProjectId(id);
+  return getDb().transaction(async tx => {
+    const [current] = await tx.select().from(projects).where(tenant(actor, id)).limit(1).for("update");
+    if (!current) throw new ApiError(404, "Project not found.");
+    if (current.revision !== expectedRevision) throw new ApiError(409, "This project changed in another tab. Reload before restoring a version.", "REVISION_CONFLICT");
+    if (current.status !== "active") throw new ApiError(409, "Restore the project from its current status before restoring an architecture version.", "INACTIVE_PROJECT");
+    const [source] = await tx.select().from(architectureVersions).where(and(eq(architectureVersions.projectId, id), eq(architectureVersions.workspaceId, actor.workspaceId), eq(architectureVersions.revision, targetRevision))).limit(1);
+    if (!source) throw new ApiError(404, "Architecture version not found.");
+    const graph = architectureSchema.parse({ ...source.graph, id, name: source.name, description: source.description, version: current.revision + 1, createdAt: current.graph.createdAt });
+    const [row] = await tx.update(projects).set({ name: source.name, description: source.description, notes: source.notes, graph, revision: current.revision + 1, updatedAt: new Date() }).where(and(tenant(actor, id), eq(projects.revision, expectedRevision))).returning();
+    if (!row) throw new ApiError(409, "This project changed in another tab. Reload before restoring a version.", "REVISION_CONFLICT");
+    await snapshot(tx, row, actor, `restored from version ${targetRevision}`);
+    return document(row);
+  });
 }

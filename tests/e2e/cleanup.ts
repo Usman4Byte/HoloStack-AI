@@ -23,6 +23,7 @@ export default async function cleanup() {
         await client.query("DELETE FROM holostack.ai_messages WHERE user_id=ANY($1::uuid[])", [ids]);
         await client.query("DELETE FROM holostack.ai_artifacts WHERE user_id=ANY($1::uuid[])", [ids]);
         await client.query("DELETE FROM holostack.ai_usage_records WHERE user_id=ANY($1::uuid[])", [ids]);
+        await client.query("DELETE FROM holostack.intelligence_runs WHERE user_id=ANY($1::uuid[])", [ids]);
         await client.query("DELETE FROM holostack.ai_quota_counters WHERE quota_key=ANY($1::text[])", [ids.map(id => `user:${id}:${new Date().toISOString().slice(0, 10)}`)]);
         await client.query("DELETE FROM holostack.usage_events WHERE user_id=ANY($1::uuid[])", [ids]);
         await client.query("DELETE FROM holostack.architecture_versions WHERE created_by=ANY($1::uuid[])", [ids]);

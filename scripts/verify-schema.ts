@@ -65,7 +65,7 @@ async function main() {
     console.log("PASS: application DDL, migration repeat-run, row-lock syntax, eight atomic rate-limit increments, exactly three concurrent user-quota reservations, and one winner for eight identical in-flight requests.");
   } finally {
     try {
-      for (const table of ["ai_messages", "ai_artifacts", "ai_usage_records", "ai_quota_counters", "usage_events", "architecture_versions", "projects", "workspace_members", "sessions", "workspaces", "users", "rate_limits", "migration_ledger"]) await pool.query(`DROP TABLE IF EXISTS ${schema}.${table}`);
+      for (const table of ["intelligence_runs", "ai_messages", "ai_artifacts", "ai_usage_records", "ai_quota_counters", "usage_events", "architecture_versions", "projects", "workspace_members", "sessions", "workspaces", "users", "rate_limits", "migration_ledger"]) await pool.query(`DROP TABLE IF EXISTS ${schema}.${table}`);
       await pool.query(`DROP SCHEMA IF EXISTS ${schema}`);
     } catch { passed = false; console.error(`Cleanup incomplete for generated schema ${schema}.`); }
     await pool.end();

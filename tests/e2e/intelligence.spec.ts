@@ -1,0 +1,35 @@
+import { expect, test } from "@playwright/test";
+import { account, headers } from "./fixtures";
+
+test("ScaleLab stays deterministic and scenario runs persist against a project revision", async ({ page }) => {
+  const calls: string[] = [];
+  page.on("request", request => { if (request.url().includes("/api/ai/") && request.method() !== "GET") calls.push(request.url()); });
+  await account(page.request);
+  const created = await page.request.post("/api/projects", { headers, data: { name: "ScaleLab acceptance", templateId: "ai-saas" } });
+  expect(created.status()).toBe(201);
+  const { project } = await created.json();
+  await page.goto(`/projects/${project.id}`);
+  const panel = page.getByRole("region", { name: "ScaleLab and architecture review" });
+  await expect(panel.getByText("DETERMINISTIC ENGINE · NO AI REQUESTS")).toBeVisible();
+  await expect(panel.getByText("MODELED OFFERED LOAD")).toBeVisible();
+  await panel.getByLabel("Direct requests / sec").fill("1000");
+  await expect(panel.getByText("1,000", { exact: true }).first()).toBeVisible();
+  await panel.getByRole("button", { name: "Save scenario" }).click();
+  await expect(panel.getByRole("status")).toContainText("Saved against project version 1.");
+  const response = await page.request.get(`/api/projects/${project.id}/intelligence`);
+  expect(response.status()).toBe(200);
+  const result = await response.json();
+  expect(result.runs[0].name).toBe("Custom scenario");
+  expect(result.runs[0].graphRevision).toBe(1);
+  expect(result.runs[0].capacity.offeredRps).toBe(1000);
+  const edited = await page.request.patch(`/api/projects/${project.id}`, { headers, data: { revision: 1, name: "ScaleLab revised" } });
+  expect(edited.status()).toBe(200);
+  const comparison = await page.request.get(`/api/projects/${project.id}/versions/compare?revision=1`);
+  expect((await comparison.json()).comparison.fields.nameChanged).toBe(true);
+  const restored = await page.request.post(`/api/projects/${project.id}/versions/1/restore`, { headers, data: { expectedRevision: 2 } });
+  expect(restored.status()).toBe(200);
+  expect((await restored.json()).project.revision).toBe(3);
+  const current = await page.request.get(`/api/projects/${project.id}`);
+  expect((await current.json()).project.name).toBe("ScaleLab acceptance");
+  expect(calls).toEqual([]);
+});

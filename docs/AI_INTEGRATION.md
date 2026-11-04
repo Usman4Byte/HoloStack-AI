@@ -35,11 +35,11 @@ The Google AI Studio free tier may use submitted content to improve Google produ
 - No provider call is made from browser code. `server-only` protects the provider module.
 - Invalid, oversized, or graph-invalid model responses are rejected. No automatic JSON repair request is sent; the user may explicitly retry and see the next action consume quota.
 - Provider 429, 503, missing-key, invalid-key, and unavailable-model errors map to safe user-facing messages. Raw provider messages and prompt content are not returned or logged.
-- No model calls run on load, autosave, canvas actions, template selection, or slider movement. ScaleLab and deterministic risk analysis remain TypeScript-only future work in Module 5.
+- No model calls run on load, autosave, canvas actions, template selection, report export, risk review, or slider movement. ScaleLab and deterministic review are local TypeScript operations; saving a scenario is an authenticated database write and does not invoke a model.
 - No production provider smoke test is run by default. `tests/e2e/ai-live-smoke.spec.ts` makes exactly one quota-metered generation request only when all explicit key/free-tier flags are set; otherwise it is skipped. Unit tests use a mocked SDK and never consume provider quota.
 
 ## Current verification boundary
 
 The app schema migration is additive and the exact migration was exercised in a randomly named TiDB scratch schema before applying it. Eight concurrent reservations against the quota-counter logic allow exactly three requests for a test user. Whether this local Google AI Studio key can access the configured models can only be verified after the key and free-tier confirmation are configured; a successful first generation (or the explicitly enabled one-request smoke test) is the provider verification. Do not describe Gemini as verified before that succeeds.
 
-ScaleLab, deterministic risk rules, comprehensive optimization findings, architecture history restoration, and production monitoring are not included in Module 4. Optimization suggestions are AI proposals only; no performance improvement is measured or promised.
+ScaleLab, deterministic risk rules, architecture history comparison/restoration, and Markdown reporting are delivered in Module 5. AI optimization remains a user-requested proposal; deterministic validation and simulation run locally after it returns. No performance improvement is measured or promised.

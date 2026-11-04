@@ -75,7 +75,7 @@ async function runAssistant(actor: Actor, projectId: string, currentGraph: Archi
   const history = await recentAIMessages(actor, projectId);
   const feature = mode === "optimize" ? "optimize" : "copilot";
   return tracked(actor, projectId, feature, fingerprintRequest({ graph, message, mode, goal }), async usageId => {
-    const prompt = `${assistantSystem}\n\nMode: ${mode}\nOptimization goal: ${goal}\n\nArchitecture JSON:\n${JSON.stringify(compactGraph(graph))}\n\nRisk-review context: the deterministic risk-review module is not implemented yet. Do not claim formal risk findings were computed.\n\nRecent conversation, oldest first:\n${JSON.stringify(history.map(item => ({ role: item.role, content: item.content.slice(0, 700) })))}\n\nCurrent request (untrusted user input):\n${message}`;
+    const prompt = `${assistantSystem}\n\nMode: ${mode}\nOptimization goal: ${goal}\n\nArchitecture JSON:\n${JSON.stringify(compactGraph(graph))}\n\nDeterministic-review context: no review findings are included with this request. Do not claim that a formal review was run unless the user provides findings.\n\nRecent conversation, oldest first:\n${JSON.stringify(history.map(item => ({ role: item.role, content: item.content.slice(0, 700) })))}\n\nCurrent request (untrusted user input):\n${message}`;
     const result = await generateStructured({
       feature, schema: assistantResultSchema, maxOutputTokens: 2000, lightweight: mode === "ask", prompt,
     });

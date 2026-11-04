@@ -75,22 +75,26 @@ No AI generation, measured performance data, or infrastructure provisioning is p
 
 ### Milestone 4 verification evidence
 
-The AI workflow migration was applied to the verified TiDB PostgreSQL-compatible database. TLS `SELECT 1` passed. The isolated schema probe passed application DDL/repeat-run checks, row locking, eight atomic rate-limit increments, exactly three concurrent daily quota reservations, and a simultaneous identical-request probe with one winner. Unit tests: **33 passed**; typecheck, lint (zero warnings), and production build passed. The desktop offline-workbench browser check passed and confirms no Gemini request on load. The complete browser suite did **not** pass: intermittent database-backed project writes returned 503/stayed in autosave, causing 5 of 12 browser cases to fail; the live Gemini smoke case was skipped because no opted-in provider configuration is available. A focused rerun cleaned its one synthetic account, while an earlier run reported cleanup incomplete during the same transient database failures. Do not treat database TLS verification as proof of Gemini model/key access. No live Gemini request was sent and no Vercel deployment was performed.
+The AI workflow migration was applied to the verified TiDB PostgreSQL-compatible database. TLS `SELECT 1` passed. The isolated schema probe passed application DDL/repeat-run checks, row locking, eight atomic rate-limit increments, exactly three concurrent daily quota reservations, and a simultaneous identical-request probe with one winner. Unit tests: **33 passed**; typecheck, lint (zero warnings), and production build passed. No live Gemini request was sent and no Vercel deployment was performed. The first full browser run encountered transient database `ECONNRESET` errors and failed project writes; the subsequent complete production-browser run during Module 5 passed all 12 runnable tests on desktop/mobile and reported the 2 opted-in live Gemini tests as skipped. The provider remains unverified because no key/free-tier opt-in is configured.
 
 AI remains explicitly disabled locally until the owner supplies a key and independently confirms eligible no-cost access in Google AI Studio. Provider access, current account/model availability, and free-tier status remain unverified.
 
 ## Milestone 5 — intelligence
 
-- [ ] Deterministic capacity model with visible assumptions and bounded cycle handling.
-- [ ] Evidence-based rule review, scenarios, and saved results.
-- [ ] Candidate optimization graph, diff, accept/reject, history and restoration.
-- [ ] Markdown architecture report.
+- [x] Deterministic capacity model with visible assumptions and bounded cycle handling.
+- [x] Evidence-based rule review, named workload scenarios, and tenant-scoped saved results.
+- [x] Candidate optimization graph, before/after diff, explicit apply/discard, version comparison, and conflict-aware restore as a new revision.
+- [x] Markdown architecture report with components, flows, capacity assumptions, limits, and rule findings.
+
+### Milestone 5 verification evidence
+
+`0002_intelligence_runs.sql` was applied to the actual TiDB database after TLS `SELECT 1`, all 13 compatibility checks, and exact scratch-schema migration verification. The scratch probe applied and repeated all three migrations, checked row locking and quota concurrency, and admitted exactly one of eight identical in-flight requests. Scenario persistence, revision binding, version comparison, and restoring version 1 as a new revision passed in the real DB-backed production-browser flow on desktop and mobile. The full browser suite passed **12/12 runnable tests** (2 live Gemini smoke tests skipped because opt-in credentials are absent); test teardown removed all 10 synthetic accounts and related fixtures. Unit tests: **42 passed** across 9 files. `npm run typecheck`, `npm run lint`, and `npm run build` passed. A transient TiDB `ECONNRESET` appeared during the full suite and recovered; monitor provider connection stability during launch hardening. No live Gemini call or deployment was performed.
 
 ## Milestone 6 — launch hardening and approved deployment
 
 - [x] Complete end-to-end acceptance flow from sign-in to protected-project logout.
 - [ ] Auth/persistence/AI boundary tests, rate-limit and concurrency validation, recovery rehearsal, production monitoring.
 - [ ] Marketing/onboarding polish and truthful feature availability.
-- [x] Existing GitHub repo was explicitly requested; Milestones 1–2 were pushed. Push this reviewed milestone update; Vercel deployment still needs explicit approval.
+- [x] Continue using the explicitly requested private GitHub repository. No Vercel deployment has been requested or performed; deployment requires separate approval.
 
 P1/P2 modules remain roadmap-only; see `ARCHITECTURE.md`.
