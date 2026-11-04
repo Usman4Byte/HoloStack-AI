@@ -19,12 +19,13 @@
 - The actual Google AI Studio project's model access, free quota, billing state, regional availability, and data controls are unverified. Model pricing information alone does not prove a project can use the model at no cost. Consult the current [model catalog](https://ai.google.dev/gemini-api/docs/models), [structured output documentation](https://ai.google.dev/gemini-api/docs/structured-output), and [pricing](https://ai.google.dev/gemini-api/docs/pricing).
 - The free tier may use submitted content to improve provider products. User consent is requested per AI action, but users must still avoid secrets and confidential/customer data unless the provider terms are acceptable.
 - App caps are 3 AI actions per user per UTC day, 30 per application per UTC day, and 3 AI actions per user/address per minute. These are server-side application limits, not Google's quota guarantees.
-- No automatic retries or fallbacks are used. Unsupported model/quota errors stop the action. Live-provider availability therefore needs an explicitly consented, quota-metered test before enabling AI for users.
+- HoloStack no longer imposes a daily cap on AI usage. Short-window abuse protection and Google's model-specific quotas still apply. Each configured model is tried at most once per request; live-provider availability can vary and can fail when the provider has no available quota.
 
 ## Product scope
 
-- The public workspace is a local sample. It is not saved to the cloud and its UI does not claim live telemetry or deployed infrastructure.
-- Seven sample architectures are authored fixtures. Capacity figures are assumptions and should not be treated as benchmarks, production load plans, cost estimates, or guarantees.
+- Guest projects are kept in browser `sessionStorage`; a normal tab close ends that session, and guest data is not available on another device. Browser session-restore features may restore a closed tab's session, depending on browser settings. Create an account and save work to TiDB for durable cross-session access.
+- The seven starter architectures are authored templates. Capacity figures are assumptions and should not be treated as benchmarks, production load plans, cost estimates, or guarantees.
+- Guest AI keeps HMAC-hashed usage counters for display, with no daily usage cap. Guest project data and prompt/results are not stored by HoloStack, though Google AI Studio may retain/use request content under its applicable terms.
 - The public prepared cache comparison is an authored local graph transformation with a visible illustrative 65% hit-rate assumption. It is not AI optimization, not applied to the canvas, and not measured performance improvement.
 - Risk review uses named deterministic graph/text heuristics. Findings show evidence and assumptions; absence of a finding does not prove safety, while a missing text label does not prove that a control is absent from implementation.
 - The capacity simulator propagates requests through the modeled graph and bounds cyclic paths. It does not account for real latency distributions, queueing behavior, autoscaling, shared resource contention, provider rate limits, regional failure, cloud pricing, or measured cache behavior.

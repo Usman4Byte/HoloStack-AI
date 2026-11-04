@@ -7,7 +7,7 @@ import { architectureVersions, projects, workspaces, usageEvents } from "@/serve
 import { type Actor, requireWriter } from "@/server/auth/session";
 import { ApiError } from "@/server/http/errors";
 import { architectureSchema, type Architecture } from "@/domain/architecture/schema";
-import { templates } from "@/domain/architecture/templates";
+import { scratchTemplate, templates } from "@/domain/architecture/templates";
 import { architectureDiff } from "@/domain/ai/architecture";
 import { createProjectSchema, updateProjectSchema, listProjectsSchema, projectIdSchema, type ProjectDocument, type ProjectSummary } from "@/domain/projects/schema";
 
@@ -59,7 +59,7 @@ async function insertProject(actor: Actor, input: { name: string; description: s
   });
 }
 export async function createProject(actor: Actor, input: z.infer<typeof createProjectSchema>) {
-  const template = templates.find(value => value.id === input.templateId);
+  const template = [scratchTemplate, ...templates].find(value => value.id === input.templateId);
   if (!template) throw new ApiError(400, "Choose a valid starter template.");
   return insertProject(actor, { ...input, notes: "", graph: template });
 }

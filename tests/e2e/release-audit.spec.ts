@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { projectTest as test } from "./fixtures";
 import { templates } from "@/domain/architecture/templates";
 
 const viewportCases = [
@@ -21,62 +22,84 @@ function graphWithNodes(count: number) {
   return { ...base, nodes, edges };
 }
 
-test("public demo stays deterministic, exportable, and responsive without Gemini requests", async ({ page }, testInfo) => {
-  const aiRequests: string[] = [];
-  page.on("request", request => { if (request.url().includes("/api/ai/")) aiRequests.push(`${request.method()} ${request.url()}`); });
+test("guests create and edit real projects that persist across refresh in this browser session", async ({ page, browser }, testInfo) => {
+  const projectWrites: string[] = [], providerCalls: string[] = [];
+  page.on("request", request => {
+    if (request.url().includes("/api/projects") && request.method() !== "GET") projectWrites.push(request.url());
+    if (request.url().includes("/api/ai/") && request.method() === "POST") providerCalls.push(request.url());
+  });
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Big ideas. Better systems." })).toBeVisible();
-  const analysis = page.getByRole("region", { name: "Public sample ScaleLab and architecture review" });
-  await expect(analysis.getByText("DETERMINISTIC ENGINE · NO AI REQUESTS")).toBeVisible();
-  await expect(analysis.getByRole("heading", { name: "Rule-based architecture review" })).toBeVisible();
-  await expect(analysis.getByRole("button", { name: "Compare prepared variant" })).toBeVisible();
-  await analysis.getByRole("button", { name: "Compare prepared variant" }).click();
-  const comparison = analysis.getByRole("region", { name: "Prepared local architecture comparison" });
-  await expect(comparison.getByText("PREPARED FIXTURE · NO PROVIDER CALL · NOT APPLIED")).toBeVisible();
-  await expect(comparison.getByText(/Modeled database requests:/)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Continue without signup" })).toHaveAttribute("href", "/guest");
+  await page.getByRole("link", { name: "Continue without signup" }).click();
+  await expect(page.getByRole("heading", { name: "Welcome to your workspace." })).toBeVisible();
+  await page.getByRole("button", { name: "New project" }).click();
+  await page.getByLabel("Project name", { exact: true }).fill("Guest architecture");
+  await page.getByLabel("Starting point").selectOption("scratch");
+  await page.getByRole("button", { name: "Create project", exact: true }).click();
+  await expect(page).toHaveURL(/\/guest\/projects\/[a-f0-9-]+$/);
+  await page.getByLabel("Component to add").selectOption("service");
+  await page.getByRole("button", { name: "Add selected component" }).click();
+  await page.getByLabel("Component name", { exact: true }).fill("Guest API");
+  await expect(page.getByRole("status").filter({ hasText: "Saved in this browser session" }).first()).toBeVisible();
+  await page.getByRole("button", { name: "Details & history" }).click();
+  await page.getByLabel("Engineering notes").fill("Guest notes remain in this session.");
+  await expect(page.getByRole("status").filter({ hasText: "Saved in this browser session" }).first()).toBeVisible();
+  await page.getByRole("button", { name: "Scale & review" }).click();
+  await page.getByRole("button", { name: "Save in session" }).click();
+  await expect(page.getByText("MVP baseline · v", { exact: false })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Guest architecture" })).toBeVisible();
+  await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await expect(page.getByLabel("Component name", { exact: true })).toHaveValue("Guest API");
+  await page.getByRole("button", { name: "Details & history" }).click();
+  await expect(page.getByLabel("Engineering notes")).toHaveValue("Guest notes remain in this session.");
+  await page.getByRole("button", { name: "View recent versions" }).click();
+  await expect(page.locator(".version-list li").first()).toBeVisible();
+  await page.getByRole("button", { name: "Scale & review" }).click();
+  await expect(page.getByText(/MVP baseline · v/)).toBeVisible();
+  await page.getByRole("button", { name: "AI assistant" }).click();
+  await expect(page.getByText(/guest daily actions left/)).toBeVisible();
+  await expect(page.getByRole("region", { name: "HoloStack AI workbench" })).toBeVisible();
+  const storageSize = await page.evaluate(() => sessionStorage.getItem("holostack.guest-workspace.v1")?.length ?? 0);
+  expect(storageSize).toBeGreaterThan(0);
+  expect(projectWrites).toEqual([]);
+  expect(providerCalls).toEqual([]);
 
-  const traffic = analysis.getByLabel("Sample direct requests per second");
-  await traffic.focus(); await traffic.press("ArrowRight");
-  await expect(analysis.getByText("90", { exact: true })).toBeVisible();
-  await expect(analysis.getByText(/Modeled database requests:/)).toBeVisible();
-
-  const reportEvent = page.waitForEvent("download");
-  await analysis.getByRole("button", { name: "Export report" }).click();
-  const report = await reportEvent;
-  expect(report.suggestedFilename()).toBe("ai-saas-rag-report.md");
-  const reportStream = await report.createReadStream();
-  const reportChunks = []; for await (const chunk of reportStream!) reportChunks.push(chunk);
-  const markdown = Buffer.concat(reportChunks).toString("utf8");
-  expect(markdown).toContain("not load tests");
-  expect(markdown).toContain("Evidence:");
+  const isolated = await browser.newContext();
+  try {
+    const otherPage = await isolated.newPage();
+    await otherPage.goto(page.url());
+    await expect(otherPage.getByText("This guest project is not available in this browser session.")).toBeVisible();
+  } finally { await isolated.close(); }
 
   for (const viewport of viewportCases) {
     await page.setViewportSize(viewport);
-    await expect(page.getByRole("heading", { name: "Big ideas. Better systems." })).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
     expect(overflow, `horizontal overflow at ${viewport.width}px`).toBe(false);
-    await page.screenshot({ path: testInfo.outputPath(`release-${viewport.width}.png`), fullPage: true });
+    await page.screenshot({ path: testInfo.outputPath(`guest-${viewport.width}.png`), fullPage: true });
   }
-  await expect(page.getByRole("button", { name: "Automatically arrange components" })).toBeVisible();
-  expect(aiRequests).toEqual([]);
+  for (const path of ["/dashboard", "/settings", "/setup"]) {
+    await page.goto(path);
+    await expect(page).toHaveURL(/\/login$/);
+  }
+  expect((await page.request.get("/api/projects")).status()).toBe(401);
 });
 
-test("canvas imports usable graphs through 100 components and rejects 200 at the documented limit", async ({ page }) => {
+test("canvas imports usable graphs through 100 components and rejects 200 at the documented limit", async ({ page, openFixtureProject }) => {
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
-  await page.goto("/");
-  await page.getByRole("button", { name: "Reset sample" }).click();
-  await expect(page.getByRole("status")).toContainText("Sample reset to its authored starting point.");
+  await openFixtureProject(page, "Graph size audit");
+  await page.getByRole("button", { name: "Fit architecture to view" }).click();
   const input = page.getByLabel("Import architecture JSON file");
   const graphCount = page.locator(".studio-footer > span").first();
   for (const count of [10, 50, 100]) {
     await input.setInputFiles({ name: `audit-${count}.json`, mimeType: "application/json", buffer: Buffer.from(JSON.stringify(graphWithNodes(count))) });
-    await expect(page.getByRole("status")).toContainText(`Imported ${count} components`, { timeout: 15_000 });
+    await expect(page.locator(".export-notice")).toContainText(`Imported ${count} components`, { timeout: 15_000 });
     await expect(graphCount).toContainText(`${count} components`, { timeout: 15_000 });
     await page.getByRole("button", { name: "Fit architecture to view" }).click();
   }
   await input.setInputFiles({ name: "audit-200.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(graphWithNodes(200))) });
-  await expect(page.getByRole("status")).toContainText("does not match a valid HoloStack architecture");
+  await expect(page.locator(".export-notice")).toContainText("does not match a valid HoloStack architecture");
   await expect(graphCount).toContainText("100 components");
   expect(errors).toEqual([]);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);

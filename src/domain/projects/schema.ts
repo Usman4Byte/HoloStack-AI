@@ -14,3 +14,8 @@ export const listProjectsSchema = z.object({
 });
 export type ProjectSummary = { id: string; name: string; description: string; revision: number; status: string; templateId: string; updatedAt: string };
 export type ProjectDocument = ProjectSummary & { notes: string; graph: z.infer<typeof architectureSchema>; createdAt: string };
+export const projectDocumentSchema = z.object({
+  id: projectIdSchema, name: projectNameSchema, description: z.string().max(4000), revision: z.number().int().min(1),
+  status: z.enum(["active", "archived", "deleted"]), templateId: z.string().min(1).max(80), updatedAt: z.iso.datetime(),
+  notes: z.string().max(20000), graph: architectureSchema, createdAt: z.iso.datetime(),
+}).strict();

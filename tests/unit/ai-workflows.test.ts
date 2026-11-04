@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { templates } from "@/domain/architecture/templates";
 import { architectureSchema } from "@/domain/architecture/schema";
 import { applyArchitectureChanges, buildGeneratedArchitecture } from "@/domain/ai/architecture";
-import { assistantResultSchema, generatedArchitectureSchema, boundedDailyLimit, exceededDailyQuota } from "@/domain/ai/schema";
+import { assistantResultSchema, generatedArchitectureSchema } from "@/domain/ai/schema";
 
 const base = templates[0];
 const generated = {
@@ -40,14 +40,8 @@ describe("AI workflow schemas and deterministic application", () => {
     expect(() => applyArchitectureChanges(base, [{ operation: "remove_node", targetId: "not-here", node: null, edge: null }])).toThrow(/no longer exists/);
   });
 
-  it("rejects malformed assistant outputs and caps quotas at the $0 policy", () => {
+  it("rejects malformed assistant outputs", () => {
     expect(assistantResultSchema.safeParse({ answer: "Consider an explicit queue boundary.", changes: [], tradeoffs: [] }).success).toBe(true);
     expect(assistantResultSchema.safeParse({ answer: "", changes: [], tradeoffs: [] }).success).toBe(false);
-    expect(boundedDailyLimit(undefined, 3, 3)).toBe(3);
-    expect(boundedDailyLimit("99", 3, 3)).toBe(3);
-    expect(boundedDailyLimit("-1", 3, 3)).toBe(1);
-    expect(exceededDailyQuota(3, 0, 3, 30)).toBe("user");
-    expect(exceededDailyQuota(0, 30, 3, 30)).toBe("application");
-    expect(exceededDailyQuota(2, 29, 3, 30)).toBe(null);
   });
 });

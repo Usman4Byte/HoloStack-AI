@@ -1,10 +1,10 @@
 # HoloStack AI
 
-An architecture design and intelligence workspace, built as one Next.js App Router application for Vercel. The master scope is in `HoloStack_AI_Desktop_Build_Brief.md`.
+An architecture design and intelligence workspace, built as one Next.js App Router application for Vercel. The master scope is in [`docs/project/HoloStack_AI_Desktop_Build_Brief.md`](docs/project/HoloStack_AI_Desktop_Build_Brief.md).
 
 ## Current scope
 
-Milestones 1–6: foundation, real TiDB integration, email/password authentication, server-side sessions, private project persistence and version restoration, full architecture studio, explicit Gemini workbench, deterministic ScaleLab, evidence-based architecture review, saved scenarios, Markdown reports, launch readiness checks, and a synthetic recovery rehearsal. The workspace at `/` remains a clearly labeled public sample with seven authored templates and an editable XYFlow graph. HoloCanvas includes a 16-type palette, undo/redo, deterministic layout, bounded JSON import, and PNG/JSON export. Private projects autosave with revision checks. Authenticated project owners can request architecture generation, explanations, copilot patches, and optimization candidates; every candidate is schema-validated and reviewed before applying. AI remains fail-closed until a server key and both opt-in flags are configured. ScaleLab, reviews, reports, and sliders use local deterministic TypeScript and never call Gemini. `/api/health` is liveness; `/api/ready` checks the database and required application tables without exposing connection details. The synthetic recovery rehearsal does not test provider-managed backups, and no external monitoring or deployment is configured.
+Milestones 1–6: foundation, real TiDB integration, email/password authentication, server-side sessions, private project persistence and version restoration, full architecture studio, explicit Gemini workbench, deterministic ScaleLab, evidence-based architecture review, saved scenarios, Markdown reports, launch readiness checks, and a synthetic recovery rehearsal. Visitors can continue at `/guest` without signing up. Guest projects, canvas edits, versions, AI results, and scenarios are schema-validated in browser `sessionStorage`; they persist through refresh and remain isolated from TiDB project records. Signed-in projects and AI history persist in TiDB. The old public sample route has been removed. The canvas includes a 16-type palette, a component and connection inspector with editable endpoints, undo/redo, deterministic layout, bounded JSON import, and PNG/JSON export. Private projects autosave with revision checks. Gemini is available only after a user action and explicit consent, with server-side signed-in quotas or a smaller anonymous IP-keyed quota for guests. Guest prompts are sent to Google only for that request and are not stored by HoloStack; provider-retained data follows Google's AI Studio terms. ScaleLab, reviews, reports, and sliders use local deterministic TypeScript and never call Gemini. `/api/health` is liveness; `/api/ready` checks the database and required application tables without exposing connection details. The synthetic recovery rehearsal does not test provider-managed backups, and no external monitoring or deployment is configured.
 
 ## Local development
 
@@ -49,9 +49,11 @@ Playwright runs desktop and mobile viewport tests in installed Microsoft Edge on
 
 - `src/app`: pages, layouts, boundaries, and Node.js route handlers.
 - `src/components/studio`: HoloCanvas editing controls and component inspector.
+- `src/domain/projects/guest-store.ts`: validated, tab-session-only guest projects, versions, scenarios, and AI results.
 - `src/components/ai`: consent-gated, quota-aware AI workbench and saved candidate review.
 - `src/domain/ai`: strict AI request/response schemas, graph patch application, and deterministic diffs.
 - `src/server/ai`: server-only Gemini provider, transactional quotas, usage records, and scoped chat/artifact persistence.
+- Guest Gemini requests use `/api/ai/guest/*`, anonymous hashed quota counters, and do not persist prompt or architecture payloads on the server.
 - `src/components/ui`: local shadcn-style primitives.
 - `src/domain/architecture`: strict Zod graph schemas, bounded studio operations, and seven authored templates.
 - `src/server/db`: server-only connection infrastructure and shared CLI configuration.
@@ -63,7 +65,7 @@ See [AI integration and zero-budget controls](docs/AI_INTEGRATION.md) for local 
 
 ## Final audit snapshot
 
-The latest QA evidence, release decision, AI request audit, deployment preparation, and known limitations are recorded in [FINAL_AUDIT_REPORT.md](FINAL_AUDIT_REPORT.md), [AI_USAGE_AUDIT.md](AI_USAGE_AUDIT.md), [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md), [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md), and [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md). The current decision is **Ready with limitations** for a supervised demo; production deployment, live Gemini verification, external monitoring, and provider-managed backup restoration remain open.
+The latest QA evidence, release decision, AI request audit, deployment preparation, and known limitations are recorded under [`docs/reports/`](docs/reports/): [final audit](docs/reports/FINAL_AUDIT_REPORT.md), [AI usage audit](docs/reports/AI_USAGE_AUDIT.md), [release checklist](docs/reports/RELEASE_CHECKLIST.md), [deployment guide](docs/reports/DEPLOYMENT_GUIDE.md), and [known limitations](docs/reports/KNOWN_LIMITATIONS.md). The current decision is **Ready with limitations** for a supervised demo; production deployment, live Gemini verification, external monitoring, and provider-managed backup restoration remain open.
 
 ## Deployment
 

@@ -25,7 +25,7 @@ export const architectureEdgeSchema = z.object({
 export const architectureSchema = z.object({
   id: identifier, name: z.string().min(1).max(120), version: z.number().int().positive(),
   description: text, requirements: text, assumptions: z.array(z.string().max(1000)).max(50),
-  nodes: z.array(architectureNodeSchema).min(1).max(100),
+  nodes: z.array(architectureNodeSchema).max(100),
   edges: z.array(architectureEdgeSchema).max(300),
   createdAt: z.iso.datetime(),
 }).strict().superRefine((graph, ctx) => {

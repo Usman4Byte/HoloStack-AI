@@ -7,7 +7,7 @@ function template(id: string, name: string, description: string, components: Com
   return architectureSchema.parse({
     id, name, version: 1, description, requirements: description,
     assumptions: [
-      "Educational sample, authored locally. This is not AI-generated or deployed infrastructure.",
+      "Educational template, authored locally. This is not AI-generated or deployed infrastructure.",
       "Capacity values are illustrative inputs, not benchmarks. Validate them with measurements before capacity planning.",
       "Single-region deployment. Availability, cost, and provider quotas require independent evaluation.",
     ],
@@ -25,6 +25,11 @@ function template(id: string, name: string, description: string, components: Com
     createdAt: "2026-11-03T00:00:00.000Z",
   });
 }
+
+export const scratchTemplate = architectureSchema.parse({
+  ...template("scratch", "Start from scratch", "An empty canvas. Add your first component to begin.", [], []),
+  assumptions: [],
+});
 
 export const templates: Architecture[] = [
   template("ai-saas", "AI SaaS / RAG", "A retrieval-augmented assistant with private knowledge, a secure API, and an external model provider.", [

@@ -70,7 +70,7 @@ export function friendlyProviderError(error: unknown): ApiError {
   if (status === 408 || status >= 500 || status === 0) {
     const detail = Number.isInteger(status) && status >= 400 && status <= 599 ? `HTTP ${status}` : "no HTTP status";
     console.error(`Gemini request unavailable (${detail}).`);
-    return new ApiError(503, "Gemini is temporarily unavailable. You can retry this action; the retry uses another AI action from your daily allowance.", "AI_PROVIDER_UNAVAILABLE");
+    return new ApiError(503, "Gemini is temporarily unavailable. You can retry this action; each configured model will be tried once.", "AI_PROVIDER_UNAVAILABLE");
   }
   const detail = Number.isInteger(status) && status >= 400 && status <= 599 ? `HTTP ${status}` : "unknown status";
   console.error(`Gemini request rejected (${detail}).`);

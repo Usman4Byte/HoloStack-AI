@@ -1,6 +1,6 @@
 # HoloStack AI project rules
 
-- Read `HoloStack_AI_Desktop_Build_Brief.md` and `docs/MILESTONES.md` before continuing milestone work.
+- Read `docs/project/HoloStack_AI_Desktop_Build_Brief.md` and `docs/MILESTONES.md` before continuing milestone work.
 - Keep this one Next.js App Router application for Vercel. TiDB must use PostgreSQL compatibility, not MySQL.
 - Never print or commit `.env.local`, credentials, raw DB errors, or sensitive prompt data. Do not read secret files into tool output. Server secrets must never reach client modules or `NEXT_PUBLIC_*` variables.
 - Real database verification precedes application migrations. Isolated scratch probes may create/drop only their own randomly named objects. Never alter TiDB-managed metadata tables.

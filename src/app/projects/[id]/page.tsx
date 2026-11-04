@@ -8,5 +8,5 @@ export const dynamic = "force-dynamic";
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { actor, data } = await privatePage(actor => getProject(actor, id));
-  return <WorkspaceShell active="project" user={publicActor(actor)}><ProjectEditor key={data.id} initial={data} /></WorkspaceShell>;
+  return <WorkspaceShell active="project" user={publicActor(actor)} projectId={data.id}><ProjectEditor key={data.id} initial={data} /></WorkspaceShell>;
 }

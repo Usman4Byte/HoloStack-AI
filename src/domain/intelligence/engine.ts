@@ -15,7 +15,7 @@ export function simulateCapacity(graph: Architecture, workload: Workload): Capac
   for (const edge of graph.edges) inbound.set(edge.target, (inbound.get(edge.target) ?? 0) + 1);
   const roots = nodes.filter(node => node.type === "client");
   const entryNodes = roots.length ? roots : nodes.filter(node => inbound.get(node.id) === 0);
-  const entries = entryNodes.length ? entryNodes : [nodes[0]];
+  const entries = entryNodes.length ? entryNodes : nodes.slice(0, 1);
   const userDerivedRps = workload.concurrentUsers * workload.requestsPerUserPerMinute / 60;
   const offeredRps = Math.max(workload.requestsPerSecond, userDerivedRps);
   const seed = new Map(nodes.map(node => [node.id, { reads: 0, writes: 0 }]));
@@ -63,6 +63,7 @@ export function simulateCapacity(graph: Architecture, workload: Workload): Capac
 
 const finding = (item: ReviewFinding): ReviewFinding => item;
 export function reviewArchitecture(graph: Architecture, workload: Workload): ReviewFinding[] {
+  if (!graph.nodes.length) return [];
   const findings: ReviewFinding[] = [];
   const add = (item: ReviewFinding) => findings.push(finding(item));
   const types = new Set(graph.nodes.map(node => node.type));

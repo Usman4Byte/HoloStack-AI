@@ -1,18 +1,19 @@
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { projectTest as test } from "./fixtures";
 
-test("sample studio supports editing, history, layout, JSON import, PNG export, and reset", async ({ page }, testInfo) => {
+test("private canvas supports editing, history, layout, JSON import and PNG export", async ({ page, openFixtureProject }, testInfo) => {
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   const aiRequests: string[] = []; page.on("request", request => { if (request.url().includes("/api/ai/") && request.method() === "POST") aiRequests.push(request.url()); });
-  await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Big ideas. Better systems." })).toBeVisible();
-  await expect(page.getByText("Sample mode · not saved")).toBeVisible();
+  const projectId = await openFixtureProject(page, "Canvas acceptance", "commerce");
+  await expect(page.getByRole("heading", { name: "Build your diagram" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save project", exact: true })).toBeVisible();
   await expect(page.locator(".react-flow__node")).toHaveCount(6);
   await expect(page.locator(".react-flow__minimap")).toBeVisible();
   const controls = page.locator(".react-flow__controls button");
   await expect(controls).toHaveCount(3);
   await controls.first().click();
   await page.getByRole("button", { name: "Fit architecture to view" }).click();
-  const draggable = page.locator(".react-flow__node").filter({ hasText: "Application API" }).first();
+  const draggable = page.locator(".react-flow__node").filter({ hasText: "Commerce API" }).first();
   await draggable.scrollIntoViewIfNeeded();
   const initialPosition = await draggable.boundingBox();
   expect(initialPosition).not.toBeNull();
@@ -24,7 +25,6 @@ test("sample studio supports editing, history, layout, JSON import, PNG export, 
     const position = await draggable.boundingBox();
     return position ? Math.abs(position.x - initialPosition!.x) + Math.abs(position.y - initialPosition!.y) : 0;
   }).toBeGreaterThan(20);
-  await page.getByRole("button", { name: /E-commerce 6 components/ }).click();
   await expect(page.getByLabel("Component name")).toHaveValue("Commerce API");
   await page.getByLabel("Component name").fill("Order API");
   await expect(page.locator(".react-flow__node").filter({ hasText: "Order API" })).toHaveCount(1);
@@ -64,7 +64,7 @@ test("sample studio supports editing, history, layout, JSON import, PNG export, 
   const jsonDownloadEvent = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export architecture as JSON" }).click();
   const download = await jsonDownloadEvent;
-  expect(download.suggestedFilename()).toBe("holostack-commerce.json");
+  expect(download.suggestedFilename()).toBe(`holostack-${projectId}.json`);
   const stream = await download.createReadStream();
   const chunks = []; for await (const chunk of stream!) chunks.push(chunk);
   const graph = JSON.parse(Buffer.concat(chunks).toString());
@@ -74,7 +74,7 @@ test("sample studio supports editing, history, layout, JSON import, PNG export, 
   const imageDownloadEvent = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export architecture as PNG" }).click();
   const imageDownload = await imageDownloadEvent;
-  expect(imageDownload.suggestedFilename()).toBe("holostack-commerce.png");
+  expect(imageDownload.suggestedFilename()).toBe(`holostack-${projectId}.png`);
   const imageStream = await imageDownload.createReadStream();
   const imageChunks = []; for await (const chunk of imageStream!) imageChunks.push(chunk);
   expect(Buffer.concat(imageChunks).subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
@@ -82,16 +82,63 @@ test("sample studio supports editing, history, layout, JSON import, PNG export, 
   const imported = { ...graph, nodes: graph.nodes.map((node: { id: string; label: string }) => node.id === "api" ? { ...node, label: "Imported Order API" } : node) };
   await page.getByLabel("Import architecture JSON file").setInputFiles({ name: "architecture.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(imported)) });
   await expect(page.locator(".react-flow__node").filter({ hasText: "Imported Order API" })).toHaveCount(1);
-  await page.locator(".react-flow__node").filter({ hasText: "Imported Order API" }).click({ force: true });
+  const picker = page.getByLabel("Inspect a component or connection");
+  await picker.selectOption("node:api");
   await expect(page.getByLabel("Component name")).toHaveValue("Imported Order API");
+  await expect(page.locator('.react-flow__node[data-id="api"]')).toHaveClass(/diagram-item-active/);
   await page.getByLabel("Import architecture JSON file").setInputFiles({ name: "too-large.json", mimeType: "application/json", buffer: Buffer.alloc(256 * 1024 + 1) });
-  await expect(page.getByRole("status")).toContainText("256 KiB");
+  await expect(page.locator(".export-notice")).toContainText("256 KiB");
   await expect(page.locator(".react-flow__node")).toHaveCount(7);
 
-  await page.getByRole("button", { name: "Reset sample" }).click();
-  await expect(page.getByLabel("Component name")).toHaveValue("Commerce API");
-  await expect(page.locator(".react-flow__node").first()).toBeInViewport();
-  await expect(page.locator(".react-flow__node").last()).toBeInViewport();
+  await page.getByLabel("Responsibility").fill("Validate new orders and record them.");
+  await page.getByText("Traffic assumptions and notes", { exact: true }).click();
+  await page.getByLabel("Replicas", { exact: true }).fill("2");
+  const destination = await page.getByLabel("Connect to").locator("option").filter({ hasText: /^Database$/ }).getAttribute("value");
+  expect(destination).toBeTruthy();
+  await page.getByLabel("Connect to").selectOption(destination!);
+  await page.getByRole("button", { name: "Add connection" }).click();
+  const connection = await picker.locator("option").filter({ hasText: "Imported Order API → Database" }).getAttribute("value");
+  expect(connection).toBeTruthy();
+  await expect(picker).toHaveValue(connection!);
+  const updateEndpoints = page.getByRole("button", { name: "Update endpoints" });
+  await page.getByLabel("To component").selectOption("api");
+  await expect(updateEndpoints).toBeDisabled();
+  await expect(page.getByText("A component cannot connect to itself.")).toBeVisible();
+  await page.getByLabel("To component").selectOption("db");
+  await expect(updateEndpoints).toBeDisabled();
+  await expect(page.getByText("These components already have a connection in that direction.")).toBeVisible();
+  await page.getByLabel("Connection name").fill("Write orders");
+  await page.getByLabel("Connection type").selectOption("query");
+  await page.getByLabel("From component").selectOption("cache");
+  await page.getByLabel("To component").selectOption("worker");
+  await updateEndpoints.click();
+  await expect(page.getByText("Saved to workspace", { exact: true })).toBeVisible({ timeout: 20_000 });
+  await page.reload();
+  await expect(page.getByLabel("Responsibility")).toHaveValue("Validate new orders and record them.");
+  await picker.selectOption(connection!);
+  await expect(page.getByLabel("Connection name")).toHaveValue("Write orders");
+  await expect(page.getByLabel("Connection type")).toHaveValue("query");
+  await expect(page.getByLabel("From component")).toHaveValue("cache");
+  await expect(page.getByLabel("To component")).toHaveValue("worker");
+
+  // Template connections and newly created connections have the same controls.
+  await picker.selectOption("edge:edge-0");
+  await page.getByLabel("To component").selectOption("db");
+  await updateEndpoints.click();
+  await expect(page.getByRole("heading", { name: "Storefront → Orders & inventory" })).toBeVisible();
+  await page.getByRole("button", { name: "Remove connection" }).click();
+  await expect(picker.locator('option[value="edge:edge-0"]')).toHaveCount(0);
+  await page.getByRole("button", { name: "Undo architecture change" }).click();
+  await expect(picker.locator('option[value="edge:edge-0"]')).toHaveCount(1);
+  await picker.selectOption("node:cache");
+  await page.getByRole("button", { name: "Remove component" }).click();
+  await expect(picker.locator('option[value="node:cache"]')).toHaveCount(0);
+  await expect(picker.locator(`option[value="${connection}"]`)).toHaveCount(0);
+  await expect(page.getByText("Saved to workspace", { exact: true })).toBeVisible({ timeout: 20_000 });
+  await page.reload();
+  await expect(picker.locator('option[value="node:cache"]')).toHaveCount(0);
+  await expect(picker.locator(`option[value="${connection}"]`)).toHaveCount(0);
+
   expect(errors).toEqual([]);
   expect(aiRequests).toEqual([]);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
@@ -100,7 +147,27 @@ test("sample studio supports editing, history, layout, JSON import, PNG export, 
   await page.screenshot({ path: testInfo.outputPath("workspace.png"), fullPage: true });
 });
 
-test("setup, liveness, and database readiness communicate their actual scope", async ({ page, request }) => {
+test("a private canvas can start empty, save a new component, and return to empty", async ({ page, openFixtureProject }) => {
+  await openFixtureProject(page, "Blank canvas acceptance", "scratch");
+  const empty = page.getByText("Your canvas is empty");
+  const saved = page.getByText("Saved to workspace", { exact: true });
+  await expect(empty).toBeVisible();
+  await page.getByRole("button", { name: "Add selected component" }).click();
+  await page.getByLabel("Component name").fill("First service");
+  await expect(saved).toBeVisible({ timeout: 20_000 });
+  await page.reload();
+  await expect(page.getByLabel("Component name")).toHaveValue("First service");
+  await page.getByRole("button", { name: "Remove component" }).click();
+  await expect(empty).toBeVisible();
+  await expect(saved).toBeVisible({ timeout: 20_000 });
+  await page.reload();
+  await expect(empty).toBeVisible();
+  await page.getByRole("button", { name: "Scale & review" }).click();
+  await expect(page.getByText("Add a component on the Canvas to see capacity estimates and review findings.")).toBeVisible();
+});
+
+test("setup, liveness, and database readiness communicate their actual scope", async ({ page, request, openFixtureProject }) => {
+  await openFixtureProject(page, "Setup acceptance");
   await page.goto("/setup");
   await expect(page.getByRole("heading", { name: "Connection not verified here" })).toBeVisible();
   await expect(page.getByText("npm run db:check", { exact: false })).toBeVisible();

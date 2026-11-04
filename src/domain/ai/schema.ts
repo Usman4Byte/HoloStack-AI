@@ -63,14 +63,3 @@ export const assistantRequestSchema = z.object({
 export type GeneratedArchitecture = z.infer<typeof generatedArchitectureSchema>;
 export type AssistantResult = z.infer<typeof assistantResultSchema>;
 export type ArchitectureChange = z.infer<typeof architectureChangeSchema>;
-
-export function boundedDailyLimit(value: string | undefined, fallback: number, hardCap: number) {
-  const parsed = Number(value);
-  return Number.isInteger(parsed) ? Math.max(1, Math.min(hardCap, parsed)) : fallback;
-}
-
-export function exceededDailyQuota(userUsed: number, globalUsed: number, perUserLimit: number, globalLimit: number) {
-  if (userUsed >= perUserLimit) return "user" as const;
-  if (globalUsed >= globalLimit) return "application" as const;
-  return null;
-}

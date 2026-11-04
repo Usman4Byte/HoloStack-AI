@@ -57,10 +57,10 @@ describe("Gemini action failover", () => {
     expect(mocks.release).toHaveBeenCalledTimes(1);
   });
 
-  it("stops before calling a fallback that could not reserve quota", async () => {
+  it("stops when attempt accounting storage cannot reserve a fallback", async () => {
     mocks.generate.mockRejectedValue(new ApiError(503, "Unavailable", "AI_PROVIDER_UNAVAILABLE"));
-    mocks.fallback.mockRejectedValue(new ApiError(429, "Daily cap", "AI_DAILY_QUOTA"));
-    await expect(request()).rejects.toMatchObject({ code: "AI_DAILY_QUOTA" });
+    mocks.fallback.mockRejectedValue(new ApiError(503, "Usage storage unavailable", "AI_USAGE_UNAVAILABLE"));
+    await expect(request()).rejects.toMatchObject({ code: "AI_USAGE_UNAVAILABLE" });
     expect(mocks.generate).toHaveBeenCalledTimes(1);
     expect(mocks.release).toHaveBeenCalledTimes(1);
   });

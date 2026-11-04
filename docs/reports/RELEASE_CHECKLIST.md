@@ -24,6 +24,12 @@
 - [x] `npm audit --omit=dev`: zero production dependency vulnerabilities.
 - [x] `.env.local` remains ignored; no credential values were read into this report or added to source control.
 
+## Guest workspace follow-up — 2026-11-04
+
+The prior public sample route is retired. `/guest` provides a tab-session workspace backed by validated browser `sessionStorage`; signed-in projects continue to use TiDB. A fresh validation run passed **56 unit tests across 12 files**, typecheck, lint, and production build. Focused Playwright checks passed the guest workspace on desktop and mobile, including refresh persistence, another-context isolation, ScaleLab scenario retention, and zero project API writes. The signed-in project lifecycle test and tenant/auth boundary test passed on desktop. Guest AI quota status loaded without making a provider POST; a live guest or member generation request was intentionally not repeated in this run. No migration, deployment, push, or external release occurred.
+
+The AI generation client timeout was later aligned with its server-side model retry window. Typecheck, lint, build, and 58 unit tests pass with timeout/network distinction coverage. No live provider request was used for that fix.
+
 ## Limitations and required before general production release
 
 - [ ] Select a production-suitable database tier/provider. TiDB PostgreSQL-compatible Starter is a public preview without a production SLA as of the audit snapshot.

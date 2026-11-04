@@ -69,7 +69,7 @@ No AI generation, measured performance data, or infrastructure provisioning is p
 ## Milestone 4 — AI workflows
 
 - [x] Server-only Gemini integration with structured output, strict schema/graph validation, bounded output and timeout, sanitized failures, and one provider attempt per explicit user action (no automatic repair/retry).
-- [x] Persistent per-user/global daily quotas, usage records, project-scoped artifacts/conversation, and concurrent duplicate-request suppression.
+- [x] Persistent per-user/global usage counters, usage records, project-scoped artifacts/conversation, and concurrent duplicate-request suppression. (Daily-cap enforcement was later removed; see AI daily cap removal below.)
 - [x] Copilot with architecture context and typed graph patches; local deterministic validation, diff, visualization, and user-approved application.
 - [x] Clearly labeled authored templates without an API key.
 
@@ -121,4 +121,45 @@ P1/P2 modules remain roadmap-only; see `ARCHITECTURE.md`.
 
 ### Audit evidence
 
-`npm test`: **51/51**. Typecheck, lint, and production build passed. Full Playwright: **16 passed, 2 skipped** (only the explicit live-Gemini smoke tests); a separate production-browser performance audit passed and recorded 605/702/1,120 ms import acknowledgments for 10/50/100 nodes and 728 ms schema rejection for 200 nodes (one-run, automation-inclusive samples, not an SLO). TiDB `db:check`, isolated `db:verify`, and exact DDL/concurrency `db:verify-schema` all passed. Production npm dependencies have zero audit findings; the development tree reports 16 moderate ESLint/minimatch findings. Browser E2E logged transient TiDB resets that recovered; treat provider connection stability as an operational item. No application migration, live Gemini request, or deployment was performed during the audit. The full status and evidence are in `../FINAL_AUDIT_REPORT.md`, `../AI_USAGE_AUDIT.md`, `../RELEASE_CHECKLIST.md`, `../DEPLOYMENT_GUIDE.md`, and `../KNOWN_LIMITATIONS.md`.
+`npm test`: **51/51**. Typecheck, lint, and production build passed. Full Playwright: **16 passed, 2 skipped** (only the explicit live-Gemini smoke tests); a separate production-browser performance audit passed and recorded 605/702/1,120 ms import acknowledgments for 10/50/100 nodes and 728 ms schema rejection for 200 nodes (one-run, automation-inclusive samples, not an SLO). TiDB `db:check`, isolated `db:verify`, and exact DDL/concurrency `db:verify-schema` all passed. Production npm dependencies have zero audit findings; the development tree reports 16 moderate ESLint/minimatch findings. Browser E2E logged transient TiDB resets that recovered; treat provider connection stability as an operational item. No application migration, live Gemini request, or deployment was performed during the audit. The full status and evidence are in `reports/FINAL_AUDIT_REPORT.md`, `reports/AI_USAGE_AUDIT.md`, `reports/RELEASE_CHECKLIST.md`, `reports/DEPLOYMENT_GUIDE.md`, and `reports/KNOWN_LIMITATIONS.md`.
+
+## Workspace usability follow-up — 2026-11-04
+
+This earlier flow directed visitors to signup or a temporary public sample. It was superseded by the guest-workspace strategy below. The private project editor still offers separate tools for Scale & review, AI assistant, and Details & history. The canvas guides users through adding and connecting components. The inspector edits component and connection settings and highlights the selected item on the diagram.
+
+Typecheck, lint, the production build, and **55 unit tests** passed. The production browser suite recorded **18 passed and 2 skipped** across desktop and mobile. It checked selection highlights, temporary edits and reload, signup from the sample, persistence of private component and connection edits, access controls, scenario runs, and exports. The two live Gemini smoke cases were skipped under the default offline test configuration.
+
+## Guest workspace strategy — 2026-11-04
+
+- [x] Replace the public sample route with `/guest`; visitors can create, edit, archive, duplicate, trash, and restore projects without an account.
+- [x] Keep guest project data, current graph, project details, bounded version history, saved deterministic scenarios, AI candidates, and copilot messages in a strict, validated `sessionStorage` envelope. Guest writes do not call project persistence APIs.
+- [x] Preserve authenticated persistence in TiDB. The existing private dashboard and project APIs remain session-checked and workspace-scoped.
+- [x] Add explicit guest Gemini status/generation/copilot endpoints. Require same-origin, explicit consent, schema validation, server-side provider calls, and short-window rate limiting. Guest prompts and results are not stored by HoloStack on the server; hashed usage metadata is.
+- [x] Remove `/sample` and replace signup/sample navigation with a clear guest entry point.
+
+Verification: `npm run typecheck`, `npm run lint`, and `npm run build` passed. The new production-browser guest flow passed on desktop and mobile. It checks creating a blank project, adding/editing a component, writing notes, persisting a ScaleLab scenario and versions through refresh, and isolating session data in a second browser context. It also confirms guest edits do not write to `/api/projects`, and the AI quota display is requested without any AI provider POST. Authenticated route protection remains covered by the existing release audit. Browser `sessionStorage` normally ends with its tab session; browser session-restore behavior can restore tabs, depending on the browser.
+
+## AI generation timeout correction — 2026-11-04
+
+The UI's generic “Could not reach the server” can be emitted when browser `fetch` aborts, so it does not prove the Next.js server was unreachable. The local configuration had three models, each with a 25-second provider timeout, while the shared client wrapper aborted all requests after 30 seconds. That could cancel generation while model failover was still running. AI generation and assistant requests now receive a timeout derived from configured model count (25 seconds per model plus 15 seconds of overhead, capped below the route's 240-second runtime); genuine network failures retain their distinct connectivity message, while an elapsed timeout explains that server processing may still be underway. This uses no additional DB schema and does not call Gemini automatically.
+
+Verification: typecheck, lint, production build, and **58/58 unit tests** passed. New focused tests cover timeout-vs-network error classification. No live Gemini request was issued, so provider latency and end-to-end failover are not reverified in this correction.
+
+## AI daily cap removal — 2026-11-04
+
+- [x] Remove signed-in, guest, and app-wide daily AI action/model-attempt caps. Usage counters remain for visibility and transactional round-robin selection.
+- [x] Permit failover through each configured model once without HoloStack daily caps.
+- [x] Replace remaining-quota UI with action/model usage counts and provider/abuse-limit disclosure.
+
+Verification: `npm run typecheck`, `npm run lint`, `npm test` (**58/58**), and `npm run build` passed. The focused production-browser AI-offline test passed on desktop and verified the no-daily-cap status, disabled-provider path, and no AI generation request on page load; teardown removed its synthetic account and fixtures. No Gemini request was needed. Short-window endpoint rate limits and Google's own provider quotas remain in force.
+
+## Complete light UI/UX rebuild — 2026-11-04
+
+- [x] Replace the dark visual system with an editorial light design system: warm white surfaces, ink typography, orange emphasis, restrained borders, consistent focus indicators, and reduced-motion support.
+- [x] Rebuild the public landing page with a working architecture preview, authored template gallery, deterministic capacity slider, clear onboarding paths, and truthful product capability copy.
+- [x] Apply the visual system to authentication, guest and authenticated workspaces, architecture studio, AI tools, deterministic analysis, account settings, operational setup, and error states while retaining each route's existing service boundaries.
+- [x] Improve small-screen navigation and layouts; add mobile password visibility controls and accessible confirmations for destructive or unsaved-work actions.
+- [x] Preserve the guest/persisted-user split, React Flow CRUD, deterministic ScaleLab/risk checks, and explicit user-triggered AI actions. The landing simulation and routine canvas interactions make no Gemini request.
+- [x] Add a route-by-route release audit in [UI redesign audit](UI_REDESIGN_AUDIT.md).
+
+Verification: `npm run typecheck`, `npm run lint`, production `npm run build`, and `npm test` (**58/58**) passed. The focused Playwright redesign suite passed **4/4** using desktop and mobile projects. It checked public preview interactions, no AI calls from the deterministic slider, signup form visibility, guest template deep-link creation, the editable studio and AI tab with no AI POST, and no document-level horizontal overflow at 375, 768, 1024, 1440, and 1920 CSS pixels. Full-page marketing and studio captures at 375 and 1440 pixels were visually inspected. Authenticated database-backed dashboard/settings flows are preserved and were not re-exercised by this focused visual suite; their prior acceptance evidence remains above. No database migration, AI provider request, external deployment, or GitHub push was performed for this UI work.

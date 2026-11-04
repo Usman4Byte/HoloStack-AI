@@ -15,8 +15,12 @@ test("private architecture studio stays useful with AI disabled and makes no gen
   await page.getByLabel("Project name", { exact: true }).fill("Offline design workbench");
   await page.getByRole("button", { name: "Create project", exact: true }).click();
   await expect(page).toHaveURL(/\/projects\/[a-f0-9-]+$/);
+  await expect(page.getByText("Live AI is not configured.", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "AI assistant" }).click();
   await expect(page.getByText("Live AI is not configured.", { exact: true })).toBeVisible();
+  await expect(page.getByText(/No HoloStack daily cap/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Generate architecture" })).toBeDisabled();
+  await page.getByRole("button", { name: "Canvas", exact: true }).click();
   await expect(page.getByRole("button", { name: "Add selected component" })).toBeEnabled();
   expect(generationCalls).toEqual([]);
 });

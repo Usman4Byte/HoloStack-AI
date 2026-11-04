@@ -11,6 +11,13 @@ function graph(input: { types: string[]; edges: { source: string; target: string
 }
 
 describe("deterministic ScaleLab and architecture review", () => {
+  it("handles an empty project without inventing a capacity row or a risk finding", () => {
+    const architecture = graph({ types: [], edges: [] });
+    const workload = workloadPresets[0].workload;
+    expect(simulateCapacity(architecture, workload).rows).toEqual([]);
+    expect(reviewArchitecture(architecture, workload)).toEqual([]);
+  });
+
   it("uses the higher direct or concurrent-user-derived traffic input and fans out requests", () => {
     const architecture = graph({ types: ["client", "service", "database"], edges: [{ source: "n0", target: "n1", multiplier: 2 }, { source: "n1", target: "n2" }] });
     const result = simulateCapacity(architecture, { requestsPerSecond: 20, concurrentUsers: 600, requestsPerUserPerMinute: 6, readShare: 0.5 });

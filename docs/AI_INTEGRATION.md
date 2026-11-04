@@ -17,15 +17,13 @@ GEMINI_API_KEY=
 GEMINI_ENABLED=false
 GEMINI_FREE_TIER_CONFIRMED=false
 GEMINI_MODELS=gemini-3.5-flash-lite,gemini-3.6-flash,gemini-3.5-flash
-AI_DAILY_USER_LIMIT=3
-AI_DAILY_GLOBAL_LIMIT=30
 ```
 
 The service requires the key and both flags set to `true`. `GEMINI_MODELS` sets the generation pool in order. An unsupported ID disables the pool. If the new setting is absent, existing `GEMINI_MODEL` and `GEMINI_LIGHT_MODEL` values form the pool for backward compatibility.
 
-An atomic TiDB cursor selects the starting model for each action and wraps at the end of the pool. It advances once per action and is shared across server instances. On provider failure or invalid model output, HoloStack tries each remaining model in order, at most once per model and up to 25 seconds per attempt. The caller receives the first validated result or a single error when the pool is exhausted. A local quota or storage failure stops the request immediately.
+An atomic TiDB cursor selects the starting model for each action and wraps at the end of the pool. It advances once per action and is shared across server instances. On provider failure or invalid model output, HoloStack tries each remaining model in order, at most once per model and up to 25 seconds per attempt. The caller receives the first validated result or a single error when the pool is exhausted. A usage-storage failure stops before making an unrecorded provider request.
 
-The daily app budget allows up to three actions per user and 30 provider attempts across the app. Every model attempt, including a fallback, reserves a shared quota slot and records its own outcome. Limits reset at midnight UTC and can be lowered. The existing per-minute user rate limit still applies. The two AI routes allow up to 240 seconds to accommodate failover. Enable Fluid Compute on Vercel Hobby. [Vercel function duration](https://vercel.com/docs/functions/configuring-functions/duration)
+HoloStack imposes no personal, guest, or app-wide daily AI usage cap. It records usage counters for visibility and round-robin model selection. Short-window abuse protection still applies, and Google may enforce model-specific rate and free-tier quotas; if a model rejects a request, the server tries each remaining configured model once before returning a single error. The two AI routes allow up to 240 seconds to accommodate failover. Enable Fluid Compute on Vercel Hobby. [Vercel function duration](https://vercel.com/docs/functions/configuring-functions/duration)
 
 Model IDs and structured-output support are checked against Google's current model and structured-output documentation at audit time: https://ai.google.dev/gemini-api/docs/models and https://ai.google.dev/gemini-api/docs/structured-output. A model's published free-tier pricing does not prove that a particular API project has access or a usable request quota. Confirm the selected project's billing state and model quota before enabling the opt-in flags. The app allow-list intentionally includes only models that can use the intended free Standard tier; it does not use paid Priority/Flex modes, tools, grounding, or automatic paid fallback.
 
@@ -36,7 +34,7 @@ The Google AI Studio free tier may use submitted content to improve Google produ
 ## Operational boundaries
 
 - `GET /api/ai/status`, `GET /api/ai/conversation`, and `GET /api/ai/artifacts` do not call Google. They require an authenticated owner and scope all project data to the current workspace.
-- `POST /api/ai/generate` and `POST /api/ai/assistant` require a session, owner/editor role, same-origin request, bounded Zod input, explicit consent, rate limit, and a transactionally reserved user/application quota slot.
+- `POST /api/ai/generate` and `POST /api/ai/assistant` require a session, owner/editor role, same-origin request, bounded Zod input, explicit consent, short-window rate limit, and transactionally recorded usage.
 - No provider call is made from browser code. `server-only` protects the provider module.
 - HoloStack validates JSON and graph integrity before saving a candidate. Invalid output can trigger a fallback to a different configured model.
 - Model failures are recorded per attempt using sanitized codes. Individual failures stay out of the user response when a later model succeeds.

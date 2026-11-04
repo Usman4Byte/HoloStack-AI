@@ -35,6 +35,7 @@ describe("architecture trust boundary", () => {
   });
   it("caps graph size at the public validation boundary", () => {
     const base = templates[0];
+    expect(architectureSchema.safeParse({ ...base, nodes: [], edges: [] }).success).toBe(true);
     expect(architectureSchema.safeParse({ ...base, nodes: [] }).success).toBe(false);
     const nodes = Array.from({ length: 101 }, (_, i) => ({ ...base.nodes[0], id: `node-${i}` }));
     expect(architectureSchema.safeParse({ ...base, nodes, edges: [] }).success).toBe(false);

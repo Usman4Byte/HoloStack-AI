@@ -35,14 +35,14 @@ The following paths make **zero Gemini requests**:
 
 The public sample E2E test observed zero requests to `/api/ai/` while changing sliders, reviewing rules, exporting a report, and opening the prepared comparison. Offline studio E2E coverage also confirms page loading and ordinary editor activity do not issue generation calls. Provider calls exist only in the server-side provider module at `src/server/ai/provider.ts`; no browser component imports the Google SDK or invokes its API.
 
-## Quotas and safeguards
+## Usage tracking and safeguards
 
 - AI is disabled unless a server-only key and both opt-in flags are set: `GEMINI_ENABLED=true` and `GEMINI_FREE_TIER_CONFIRMED=true`.
-- Maximum daily reservations: **3 per authenticated user** and **30 per application**, UTC day. The configuration cannot raise these caps.
-- AI rate limit: **3 requests per user/address per minute**.
-- Every mutation requires a valid session, owner/editor authorization, same-origin validation, bounded request body, strict Zod validation, explicit consent, rate limit, and transactional quota reservation.
-- Concurrent duplicate request IDs are suppressed with a database lock/unique constraint. Verification admitted exactly one winner among eight identical concurrent in-flight attempts and exactly three of eight concurrent user quota reservations.
-- One provider attempt per explicit action; request timeout is bounded at 25 seconds. There is no automatic model fallback or hidden retry. A user retry is a new action and must reserve quota again.
+- HoloStack daily caps: **none** for signed-in users, guests, or total provider attempts. Database counters are usage telemetry and support round-robin selection, not enforcement.
+- Short-window rate limits remain to curb bursts and abuse; Google's own model-specific quotas and availability still apply.
+- Every mutation requires a valid session where applicable, owner/editor authorization, same-origin validation, bounded request body, strict Zod validation, explicit consent, short-window rate limit, and transactionally recorded usage.
+- Concurrent duplicate request IDs are suppressed with a database lock/unique constraint. The existing isolated DB probe admitted exactly one winner among eight identical concurrent in-flight attempts.
+- The server rotates the starting model, then tries each remaining configured model once on eligible provider/model-output failures; individual errors are hidden if a later model succeeds. No automatic retry repeats the same model.
 - Generation and assistant output token limits are bounded; response text size and generated graph schema/integrity are validated. Provider details and prompts are not returned in raw errors or logged as raw prompts.
 - Prompts, assistant responses, and architecture artifacts are project content persisted in TiDB. Users see a per-action warning/consent prompt; they should avoid secrets and sensitive/customer data unless the provider data terms are acceptable.
 
@@ -58,13 +58,19 @@ Google's current model catalog, structured-output support, and pricing should be
 - `tests/e2e/ai-offline.spec.ts` passed on desktop and mobile.
 - `tests/e2e/ai-live-smoke.spec.ts` was skipped on desktop and mobile because explicit live-provider opt-in is absent. This was intentional; no live Gemini request was made.
 - The actual API key, Google project billing, per-model quota, region availability, provider terms, and successful live structured response remain **unverified**.
-- Once a project owner confirms eligible no-cost access and accepts provider data terms, the smoke test can be enabled for exactly one quota-metered request. Reaudit usage after that action.
+- A live smoke test requires an explicit opt-in and consumes Google's provider quota; HoloStack no longer applies a daily action cap. Reaudit provider usage after the action.
 
 ## Reproducible source map
 
 - Provider and single request site: `src/server/ai/provider.ts`.
 - Auth/consent and route entry points: `src/app/api/ai/generate/route.ts`, `src/app/api/ai/assistant/route.ts`.
-- Daily quota and duplicate suppression: `src/server/ai/quota.ts`.
+- Usage tracking, model rotation, and duplicate suppression: `src/server/ai/quota.ts`.
 - Structured actions and local candidate handling: `src/server/ai/service.ts`, `src/domain/ai`.
 - Deterministic simulation/review: `src/domain/intelligence/engine.ts`.
 - Configuration and user-facing notices: `docs/AI_INTEGRATION.md`.
+
+## Guest workspace follow-up — 2026-11-04
+
+Guest Gemini requests use separate same-origin Route Handlers and the server-only Gemini service. They require explicit consent, validated requests, HMAC-hashed usage counters, and short-window rate limiting; there is no guest daily cap or shared app-wide model-attempt ceiling. The raw address is not stored in the counter key, and guest prompt, graph, conversation, and candidate payloads are not written to HoloStack server storage. Successful guest results stay in tab `sessionStorage`. Visiting guest AI fetches usage/provider status but never sends a Gemini request. The focused desktop/mobile guest E2E observed no AI POST before user submission. We did not issue a new live guest model request during this follow-up.
+
+The client now waits for the configured model pool's bounded retry window before classifying a request as timed out. This corrects the earlier 30-second browser abort against sequential 25-second model attempts. It adds no model calls or retries; request routing/failover remains server-side. A local unit test verifies timeout errors are distinguished from actual fetch/network errors.
