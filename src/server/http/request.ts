@@ -2,8 +2,11 @@ import { z } from "zod";
 import { ApiError } from "./errors";
 
 export function appOrigin() {
-  const origin = new URL(process.env.APP_URL || "http://localhost:3000");
-  if (origin.protocol !== "https:" && !["localhost", "127.0.0.1", "[::1]"].includes(origin.hostname)) throw new ApiError(503, "Application URL must use HTTPS.");
+  const configured = process.env.APP_URL?.trim();
+  if (process.env.NODE_ENV === "production" && !configured) throw new ApiError(503, "Application URL is not configured.", "APP_URL_REQUIRED");
+  const origin = new URL(configured || "http://localhost:3000");
+  const localHttp = origin.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(origin.hostname);
+  if (origin.protocol !== "https:" && (!localHttp || process.env.VERCEL === "1")) throw new ApiError(503, "Application URL must use HTTPS.", "APP_URL_HTTPS_REQUIRED");
   return origin;
 }
 

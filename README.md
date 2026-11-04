@@ -61,6 +61,10 @@ Playwright runs desktop and mobile viewport tests in installed Microsoft Edge on
 
 See [AI integration and zero-budget controls](docs/AI_INTEGRATION.md) for local provider setup, Google AI Studio billing caveats, data-sharing consent, and the opt-in live smoke test.
 
+## Final audit snapshot
+
+The latest QA evidence, release decision, AI request audit, deployment preparation, and known limitations are recorded in [FINAL_AUDIT_REPORT.md](FINAL_AUDIT_REPORT.md), [AI_USAGE_AUDIT.md](AI_USAGE_AUDIT.md), [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md), [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md), and [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md). The current decision is **Ready with limitations** for a supervised demo; production deployment, live Gemini verification, external monitoring, and provider-managed backup restoration remain open.
+
 ## Deployment
 
 No application deployment has been performed. See `docs/DEPLOYMENT.md`. The target is a single Vercel Next.js application near the database (`iad1`). Deployment requires the owner's approval and separately configured Vercel environment variables.

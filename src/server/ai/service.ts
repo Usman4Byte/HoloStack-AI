@@ -24,8 +24,8 @@ function compactGraph(graph: Architecture) {
 
 function fingerprintRequest(input: unknown) { return createHash("sha256").update(JSON.stringify(input)).digest("hex"); }
 
-async function tracked<T>(actor: Actor, projectId: string, feature: "generate" | "copilot" | "optimize", fingerprint: string, run: (usageId: string) => Promise<T>) {
-  const reservation = await reserveAIAction(actor, projectId, feature, fingerprint);
+async function tracked<T>(actor: Actor, projectId: string, feature: "generate" | "copilot" | "optimize", fingerprint: string, run: (usageId: string) => Promise<T>, lightweight = false) {
+  const reservation = await reserveAIAction(actor, projectId, feature, fingerprint, lightweight);
   try {
     const result = await run(reservation.usageId);
     await finishAIAction({ usageId: reservation.usageId, status: "succeeded", inputTokens: result && typeof result === "object" && "usage" in result ? (result.usage as { inputTokens: number | null }).inputTokens : null, outputTokens: result && typeof result === "object" && "usage" in result ? (result.usage as { outputTokens: number | null }).outputTokens : null });
@@ -90,5 +90,5 @@ async function runAssistant(actor: Actor, projectId: string, currentGraph: Archi
     if (candidate) await saveAIArtifact(actor, { usageId, projectId, kind: "proposal", payload: { ...payload, mode: mode === "optimize" ? "optimize" : "change" } });
     await saveAIConversation(actor, { projectId, usageId, question: message, answer: result.data.answer });
     return { ...payload, model: result.model, usage: result.usage };
-  });
+  }, mode === "ask");
 }

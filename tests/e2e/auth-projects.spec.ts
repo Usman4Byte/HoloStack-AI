@@ -4,6 +4,7 @@ import { account, database, fixtureEmail, fixturePassword, headers, origin } fro
 
 test("sign up, save a project, reopen it, manage its lifecycle, and sign out", async ({ page }, info) => {
   const email = fixtureEmail(), password = fixturePassword();
+  const aiRequests: string[] = []; page.on("request", request => { if (request.url().includes("/api/ai/") && request.method() === "POST") aiRequests.push(request.url()); });
   await page.goto("/signup");
   await page.getByLabel("Your name").fill("Test Architect");
   await page.getByLabel("Email address").fill(email);
@@ -75,6 +76,7 @@ test("sign up, save a project, reopen it, manage its lifecycle, and sign out", a
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
+  expect(aiRequests).toEqual([]);
 });
 
 test("tenant boundaries, stale writes, CSRF, expiration, password changes and revocation", async ({ playwright }) => {

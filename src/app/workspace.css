@@ -246,6 +246,11 @@
 .saved-intelligence button small { color: #829aaa; font-size: 8px; }
 .intelligence-notice { margin-top: 10px; color: #a4d9ce; font-size: 9px; }
 .intelligence-footer { margin-top: 13px; color: #748b9d; font-size: 8px; line-height: 1.7; }
+.public-variant-header { margin-top: 21px; }
+.public-variant-header .button { flex: 0 0 auto; }
+.prepared-variant { margin-top: 11px; padding: 13px; border: 1px solid #344858; border-radius: 8px; background: #0d1721; }
+.prepared-variant > .eyebrow { color: #a9c9c5; font-size: 8px; letter-spacing: .8px; }
+.prepared-variant-result { margin-top: 10px; color: #96aebd; font-size: 9px; line-height: 1.7; }
 @media(max-width:1200px) {
   .project-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .blueprint-strip { grid-template-columns: repeat(3,minmax(0,1fr)); }

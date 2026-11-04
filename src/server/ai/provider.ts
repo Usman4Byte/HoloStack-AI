@@ -16,9 +16,9 @@ export function aiConfiguration() {
   const key = process.env.GEMINI_API_KEY?.trim() || "";
   const explicitlyEnabled = process.env.GEMINI_ENABLED === "true";
   const freeTierConfirmed = process.env.GEMINI_FREE_TIER_CONFIRMED === "true";
-  const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash";
-  const lightModel = process.env.GEMINI_LIGHT_MODEL?.trim() || "gemini-2.5-flash-lite";
-  const freeModels = new Set(["gemini-2.5-flash", "gemini-2.5-flash-lite"]);
+  const model = process.env.GEMINI_MODEL?.trim() || "gemini-3.8-flash";
+  const lightModel = process.env.GEMINI_LIGHT_MODEL?.trim() || "gemini-3.5-flash-lite";
+  const freeModels = new Set(["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-flash-lite"]);
   const modelId = freeModels.has(model) ? model : "";
   const lightModelId = freeModels.has(lightModel) ? lightModel : "";
   return { ready: explicitlyEnabled && freeTierConfirmed && key.length >= 20 && Boolean(modelId && lightModelId), key, enabled: explicitlyEnabled, freeTierConfirmed, model: modelId, lightModel: lightModelId };

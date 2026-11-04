@@ -53,6 +53,30 @@ describe("deterministic ScaleLab and architecture review", () => {
     expect(report).not.toMatch(/composite score|risk score/i);
   });
 
+  it("flags undocumented ingress abuse controls, auth paths, payment idempotency, and sensitive boundaries as heuristics", () => {
+    const architecture = graph({
+      types: ["client", "service", "auth", "database", "external-api"],
+      edges: [
+        { source: "n0", target: "n1" }, { source: "n1", target: "n3" }, { source: "n1", target: "n4" },
+      ],
+      requirements: "Public checkout handles payment data and personal data.",
+    });
+    const ids = reviewArchitecture(architecture, workloadPresets[0].workload).map(item => item.id);
+    expect(ids).toContain("abuse-controls-undescribed");
+    expect(ids).toContain("auth-path-not-explicit");
+    expect(ids).toContain("payment-idempotency-undescribed");
+    expect(ids).toContain("sensitive-data-boundary-review");
+    expect(reviewArchitecture(architecture, workloadPresets[0].workload).filter(item => ids.includes(item.id)).every(item => item.assumptions.length > 0)).toBe(true);
+    expect(reviewArchitecture(architecture, workloadPresets[0].workload).find(item => item.id === "sensitive-data-boundary-review")?.confidence).toBe("low");
+  });
+
+  it("recognizes explicit rate-limit and payment-idempotency design notes", () => {
+    const architecture = graph({ types: ["client", "service", "database"], edges: [{ source: "n0", target: "n1" }, { source: "n1", target: "n2" }], requirements: "Public checkout has per-user rate limits and payment idempotency keys." });
+    const ids = reviewArchitecture(architecture, workloadPresets[0].workload).map(item => item.id);
+    expect(ids).not.toContain("abuse-controls-undescribed");
+    expect(ids).not.toContain("payment-idempotency-undescribed");
+  });
+
   it("strictly bounds scenario inputs and rejects unknown fields", () => {
     expect(workloadSchema.safeParse({ ...workloadPresets[0].workload, secret: "no" }).success).toBe(false);
     expect(workloadSchema.safeParse({ ...workloadPresets[0].workload, readShare: 1.5 }).success).toBe(false);

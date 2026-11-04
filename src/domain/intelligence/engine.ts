@@ -76,6 +76,32 @@ export function reviewArchitecture(graph: Architecture, workload: Workload): Rev
   const highFanout = graph.nodes.filter(node => ["service", "web-app", "api-gateway"].includes(node.type)).map(node => ({ node, edges: graph.edges.filter(edge => edge.source === node.id && edge.kind !== "event") })).filter(item => item.edges.length >= 6);
   for (const { node, edges } of highFanout) add({ id: `sync-fanout-${node.id}`, category: "reliability", severity: "medium", title: `High synchronous fanout at ${node.label}`, evidence: [`${edges.length} non-event outgoing connections are modeled.`], recommendation: "Review whether independent work can be asynchronous and define timeout, retry, and partial-failure behavior.", confidence: "medium", assumptions: ["Edge kinds correctly distinguish asynchronous event flows."] });
   if (!types.has("queue") && /async|background|ingest|batch|notification/i.test(`${graph.requirements} ${graph.description}`)) add({ id: "async-work", category: "scalability", severity: "low", title: "Requirements mention background work but no queue is shown", evidence: ["Requirements or description contain asynchronous/background processing language."], recommendation: "Consider a queue and worker boundary with idempotency and dead-letter handling.", confidence: "low", assumptions: ["Text keyword matching is a heuristic; it does not establish a requirement."] });
+
+  const modeledText = [graph.name, graph.description, graph.requirements, ...graph.assumptions,
+    ...graph.nodes.flatMap(node => [node.label, node.description, node.technology, node.metadata.notes]),
+    ...graph.edges.flatMap(edge => [edge.label, edge.metadata.contract])].join(" ");
+  const byId = new Map(graph.nodes.map(node => [node.id, node]));
+  const publicEdges = graph.edges.filter(edge => byId.get(edge.source)?.metadata.trustBoundary === "public");
+  if (publicEdges.length && !/\b(rate[\s-]?limits?|throttl|quota|waf|web application firewall|abuse protection)\b/i.test(modeledText)) {
+    add({ id: "abuse-controls-undescribed", category: "security", severity: "low", title: "Rate-limiting controls are not described", evidence: [`${publicEdges.length} modeled connection(s) leave public trust-boundary components.`, "No rate-limit, throttle, quota, WAF, or abuse-protection terms appear in the architecture text."], recommendation: "Document request rate limits, abuse controls, and quota enforcement at public entry points where they apply.", confidence: "low", assumptions: ["Text search cannot determine whether controls exist in implementation or are intentionally out of scope."] });
+  }
+  const entryTargets = publicEdges.map(edge => byId.get(edge.target)).filter((node): node is Architecture["nodes"][number] => Boolean(node && ["service", "web-app", "api-gateway"].includes(node.type)));
+  const authConnectedToEntry = graph.edges.some(edge => entryTargets.some(target =>
+    (edge.source === target.id && byId.get(edge.target)?.type === "auth") ||
+    (edge.target === target.id && byId.get(edge.source)?.type === "auth")));
+  if (types.has("auth") && entryTargets.length && !authConnectedToEntry) {
+    add({ id: "auth-path-not-explicit", category: "security", severity: "low", title: "Authentication is shown, but its ingress path is unclear", evidence: ["A public component connects directly to an application service, while no edge connects that service to the modeled authentication component."], recommendation: "Show where the service validates the user session or explain that authentication is enforced in its request path.", confidence: "low", assumptions: ["Graph connections simplify runtime behavior; a direct edge does not prove that authorization is absent."] });
+  }
+  if (/\b(payment|payments|checkout|cardholder|order processing)\b/i.test(modeledText) && !/\bidempotenc(y|ent)\b/i.test(modeledText)) {
+    add({ id: "payment-idempotency-undescribed", category: "reliability", severity: "medium", title: "Payment or order idempotency is not described", evidence: ["Architecture text mentions payment, checkout, cardholder data, or order processing but no idempotency term."], recommendation: "Document idempotency keys and duplicate-event handling for payment and order mutations where applicable.", confidence: "low", assumptions: ["Keyword matching may not reflect the actual payment flow or its provider guarantees."] });
+  }
+  const sensitiveTerms = /\b(PII|PHI|personal data|credentials?|passwords?|access tokens?|secrets?|cardholder data|payment data)\b/i.test(modeledText);
+  const crossesTrustBoundary = graph.edges.some(edge => {
+    const source = byId.get(edge.source), target = byId.get(edge.target);
+    return Boolean(source && target && source.metadata.trustBoundary !== target.metadata.trustBoundary &&
+      [source.metadata.trustBoundary, target.metadata.trustBoundary].some(boundary => ["public", "external"].includes(boundary)));
+  });
+  if (sensitiveTerms && crossesTrustBoundary) add({ id: "sensitive-data-boundary-review", category: "security", severity: "medium", title: "Review sensitive-data handling across a trust boundary", evidence: ["Sensitive-data terms appear in the design text and at least one modeled edge crosses public/private/external trust labels."], recommendation: "Document data minimization, encryption, access checks, retention, and provider-sharing boundaries for the relevant flow.", confidence: "low", assumptions: ["This text-and-label heuristic does not establish that sensitive data is actually transmitted or exposed."] });
   return findings;
 }
 

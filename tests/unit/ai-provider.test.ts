@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { generatedArchitectureSchema } from "@/domain/ai/schema";
+import { assistantResultSchema, generatedArchitectureSchema } from "@/domain/ai/schema";
 
 const sdk = vi.hoisted(() => ({ generate: vi.fn(), clientOptions: null as unknown }));
 vi.mock("server-only", () => ({}));
@@ -36,6 +36,16 @@ describe("server Gemini provider boundary", () => {
     expect(aiConfiguration().ready).toBe(false);
   });
 
+  it("defaults to current stable Flash models and routes a lightweight question to Flash-Lite", async () => {
+    vi.stubEnv("GEMINI_MODEL", "");
+    vi.stubEnv("GEMINI_LIGHT_MODEL", "");
+    expect(aiConfiguration()).toMatchObject({ model: "gemini-3.8-flash", lightModel: "gemini-3.5-flash-lite", ready: true });
+    sdk.generate.mockResolvedValue({ text: JSON.stringify({ answer: "A grounded answer.", changes: [], tradeoffs: [] }) });
+    const result = await generateStructured({ prompt: "Explicit mocked question", schema: assistantResultSchema, feature: "copilot", maxOutputTokens: 300, lightweight: true });
+    expect(result.model).toBe("gemini-3.5-flash-lite");
+    expect(sdk.generate.mock.calls[0][0].model).toBe("gemini-3.5-flash-lite");
+  });
+
   it("fails closed without making a Gemini request when live AI is disabled", async () => {
     vi.stubEnv("GEMINI_ENABLED", "false");
     await expect(generateStructured({ prompt: "No call", schema: generatedArchitectureSchema, feature: "generate", maxOutputTokens: 100 })).rejects.toMatchObject({ code: "AI_NOT_CONFIGURED" });
@@ -48,6 +58,7 @@ describe("server Gemini provider boundary", () => {
     expect(result.data.name).toBe("Private assistant");
     expect(result.usage).toEqual({ inputTokens: 81, outputTokens: 120 });
     const [request] = sdk.generate.mock.calls[0];
+    expect(request.model).toBe("gemini-2.5-flash");
     expect(request.config.responseMimeType).toBe("application/json");
     expect(request.config.responseJsonSchema.type).toBe("object");
     expect(request.config.maxOutputTokens).toBe(5000);

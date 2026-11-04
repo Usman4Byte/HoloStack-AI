@@ -16,13 +16,15 @@ Copy settings into `.env.local` without putting the key in chat, source control,
 GEMINI_API_KEY=
 GEMINI_ENABLED=false
 GEMINI_FREE_TIER_CONFIRMED=false
-GEMINI_MODEL=gemini-2.5-flash
-GEMINI_LIGHT_MODEL=gemini-2.5-flash-lite
+GEMINI_MODEL=gemini-3.8-flash
+GEMINI_LIGHT_MODEL=gemini-3.5-flash-lite
 AI_DAILY_USER_LIMIT=3
 AI_DAILY_GLOBAL_LIMIT=30
 ```
 
-The service remains disabled unless the key, `GEMINI_ENABLED=true`, and `GEMINI_FREE_TIER_CONFIRMED=true` are all present. Supported models are deliberately allow-listed to Gemini 2.5 Flash and Flash-Lite. A setting outside that list fails closed. Limits may be lowered but cannot exceed three actions per authenticated user and thirty for the whole app per UTC day. Daily reservations use transaction-scoped row locks in TiDB; the rate limiter also limits each user to three AI actions per minute. Failed provider attempts consume an app action so retries cannot evade the budget. The Google SDK makes one attempt, with a 25-second timeout; retries require a new user action and another quota slot.
+The service remains disabled unless the key, `GEMINI_ENABLED=true`, and `GEMINI_FREE_TIER_CONFIRMED=true` are all present. Defaults are Gemini 3.8 Flash for generation/change/optimization and Gemini 3.5 Flash-Lite for open-ended questions. The allow-list also retains Gemini 2.5 Flash and Flash-Lite for existing projects with confirmed access, but Google currently limits 2.5-model access to projects that actively used them; new projects should use current stable models. A setting outside the allow-list fails closed and never triggers a fallback. Limits may be lowered but cannot exceed three actions per authenticated user and thirty for the whole app per UTC day. Daily reservations use transaction-scoped row locks in TiDB; the rate limiter also limits each user to three AI actions per minute. Failed provider attempts consume an app action so retries cannot evade the budget. The Google SDK makes one attempt, with a 25-second timeout; retries require a new user action and another quota slot.
+
+Model IDs and structured-output support are checked against Google's current model and structured-output documentation at audit time: https://ai.google.dev/gemini-api/docs/models and https://ai.google.dev/gemini-api/docs/structured-output. A model's published free-tier pricing does not prove that a particular API project has access or a usable request quota. Confirm the selected project's billing state and model quota before enabling the opt-in flags. The app allow-list intentionally includes only models that can use the intended free Standard tier; it does not use paid Priority/Flex modes, tools, grounding, or automatic paid fallback.
 
 Do not enable the flags until the Google AI Studio project associated with the key shows free-tier access and has no billing account enabled. HoloStack cannot inspect the account's billing status. A free-tier model ID is not by itself a guarantee against charges if Google billing is enabled. Google documents Gemini API free-tier token pricing but actual model access and request quotas vary by project; check the project-specific quota page in AI Studio. The model/key is deliberately not probed on page load. The first explicit user action verifies whether the selected model is actually available to that key; an unavailable model produces a safe error and no automatic fallback.
 

@@ -28,10 +28,11 @@ export async function aiUsage(actor: Actor) {
   return { ...aiStatus(), limits, user: { used: userUsed, remaining: Math.max(0, limits.perUser - userUsed) }, application: { used: globalUsed, remaining: Math.max(0, limits.global - globalUsed) }, resetsAt: new Date(new Date(`${day}T00:00:00.000Z`).getTime() + 86400000).toISOString() };
 }
 
-export async function reserveAIAction(actor: Actor, projectId: string, feature: "generate" | "copilot" | "optimize", fingerprint: string) {
+export async function reserveAIAction(actor: Actor, projectId: string, feature: "generate" | "copilot" | "optimize", fingerprint: string, lightweight = false) {
   const db = getDb(), day = utcDay(), limits = dailyAILimits(), now = new Date();
   const config = aiConfiguration();
   if (!config.ready) throw new ApiError(503, aiStatus().message ?? "Live AI is not configured.", "AI_NOT_CONFIGURED");
+  const model = lightweight ? config.lightModel : config.model;
   const keys = [globalCounterKey(day), userCounterKey(actor.id, day)].sort();
   const secret = process.env.AUTH_SECRET;
   if (!secret || secret.length < 32) throw new ApiError(503, "AI quota protection is not configured.", "AI_QUOTA_UNAVAILABLE");
@@ -57,8 +58,8 @@ export async function reserveAIAction(actor: Actor, projectId: string, feature: 
     const [project] = await tx.select({ id: projects.id }).from(projects).where(and(eq(projects.id, projectId), eq(projects.workspaceId, actor.workspaceId), eq(projects.status, "active"))).limit(1);
     if (!project) throw new ApiError(404, "Active project not found.", "PROJECT_NOT_FOUND");
     for (const row of rows) await tx.update(aiQuotaCounters).set({ used: sql`${aiQuotaCounters.used} + 1` }).where(eq(aiQuotaCounters.key, row.key));
-    await tx.insert(aiUsageRecords).values({ id: usageId, workspaceId: actor.workspaceId, userId: actor.id, projectId, feature, model: config.model, status: "started", errorCode: null, inputTokens: null, outputTokens: null, createdAt: now, completedAt: null });
-    return { usageId, model: config.model, requestLockKey };
+    await tx.insert(aiUsageRecords).values({ id: usageId, workspaceId: actor.workspaceId, userId: actor.id, projectId, feature, model, status: "started", errorCode: null, inputTokens: null, outputTokens: null, createdAt: now, completedAt: null });
+    return { usageId, model, requestLockKey };
   });
 }
 

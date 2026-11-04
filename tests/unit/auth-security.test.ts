@@ -1,10 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { hashPassword, verifyPassword } from "../../src/server/auth/password";
-import { assertSameOrigin, readJson } from "../../src/server/http/request";
+import { appOrigin, assertSameOrigin, readJson } from "../../src/server/http/request";
 import { signUpSchema } from "@/domain/accounts/schema";
 import { updateProjectSchema } from "@/domain/projects/schema";
 
 describe("authentication boundaries", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
   it("salts passwords, verifies them, and rejects wrong or malformed credentials", async () => {
     const password = "a-test-only-long-passphrase";
     const first = await hashPassword(password), second = await hashPassword(password);
@@ -27,6 +29,16 @@ describe("authentication boundaries", () => {
     for (const headers of [{} as Record<string, string>, { origin: "https://evil.example" }, { origin: "http://localhost:3000", "sec-fetch-site": "cross-site" }]) {
       expect(() => assertSameOrigin(new Request(valid.url, { headers }))).toThrow();
     }
+  });
+  it("requires an explicit HTTPS application URL on Vercel production", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("APP_URL", "");
+    expect(() => appOrigin()).toThrow(/not configured/i);
+    vi.stubEnv("APP_URL", "http://localhost:3000");
+    expect(() => appOrigin()).toThrow(/HTTPS/i);
+    vi.stubEnv("APP_URL", "https://app.example.test");
+    expect(appOrigin().origin).toBe("https://app.example.test");
   });
   it("enforces actual streamed body size even without Content-Length", async () => {
     const request = new Request("http://localhost/api", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ data: "x".repeat(500) }) });

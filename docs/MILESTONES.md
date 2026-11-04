@@ -108,3 +108,17 @@ Unit tests: **45 passed** across 10 files. `npm run typecheck`, `npm run lint`, 
 The recovery rehearsal is application-level and synthetic. Provider-managed backup restoration and external production monitoring remain unverified because no separate restore instance, deployed URL, or monitor/alert owner is configured. A Vercel deployment has not been performed and still requires explicit approval.
 
 P1/P2 modules remain roadmap-only; see `ARCHITECTURE.md`.
+
+## Final comprehensive audit snapshot — 2026-11-04
+
+- [x] Run typecheck, lint, production build, unit tests, full desktop/mobile Playwright, current TiDB connection, compatibility, and exact-schema/concurrency checks.
+- [x] Add the public deterministic ScaleLab/rule-review sample and prepared, locally authored cache comparison; verify that sample interactions make no AI-route calls.
+- [x] Tighten production origin configuration so production requires an explicit HTTPS `APP_URL`.
+- [x] Capture and visually inspect the public page at 375, 768, 1440, and 1920 CSS pixels. No document-level horizontal overflow was observed.
+- [x] Add release, AI usage, deployment, and limitation reports at the repository root.
+- [ ] Verify a live Gemini request; intentionally deferred until the owner confirms provider project access, no-cost quota/billing state, and consent to provider data handling.
+- [ ] Verify provider-managed backup restore, external uptime/error monitoring, and a Vercel deployment. These require separate production resources and release authorization.
+
+### Audit evidence
+
+`npm test`: **51/51**. Typecheck, lint, and production build passed. Full Playwright: **16 passed, 2 skipped** (only the explicit live-Gemini smoke tests); a separate production-browser performance audit passed and recorded 605/702/1,120 ms import acknowledgments for 10/50/100 nodes and 728 ms schema rejection for 200 nodes (one-run, automation-inclusive samples, not an SLO). TiDB `db:check`, isolated `db:verify`, and exact DDL/concurrency `db:verify-schema` all passed. Production npm dependencies have zero audit findings; the development tree reports 16 moderate ESLint/minimatch findings. Browser E2E logged transient TiDB resets that recovered; treat provider connection stability as an operational item. No application migration, live Gemini request, or deployment was performed during the audit. The full status and evidence are in `../FINAL_AUDIT_REPORT.md`, `../AI_USAGE_AUDIT.md`, `../RELEASE_CHECKLIST.md`, `../DEPLOYMENT_GUIDE.md`, and `../KNOWN_LIMITATIONS.md`.

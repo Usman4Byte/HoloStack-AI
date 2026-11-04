@@ -2,10 +2,28 @@ import { expect, test } from "@playwright/test";
 
 test("sample studio supports editing, history, layout, JSON import, PNG export, and reset", async ({ page }, testInfo) => {
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
+  const aiRequests: string[] = []; page.on("request", request => { if (request.url().includes("/api/ai/") && request.method() === "POST") aiRequests.push(request.url()); });
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Big ideas. Better systems." })).toBeVisible();
   await expect(page.getByText("Sample mode · not saved")).toBeVisible();
   await expect(page.locator(".react-flow__node")).toHaveCount(6);
+  await expect(page.locator(".react-flow__minimap")).toBeVisible();
+  const controls = page.locator(".react-flow__controls button");
+  await expect(controls).toHaveCount(3);
+  await controls.first().click();
+  await page.getByRole("button", { name: "Fit architecture to view" }).click();
+  const draggable = page.locator(".react-flow__node").filter({ hasText: "Application API" }).first();
+  await draggable.scrollIntoViewIfNeeded();
+  const initialPosition = await draggable.boundingBox();
+  expect(initialPosition).not.toBeNull();
+  await page.mouse.move(initialPosition!.x + initialPosition!.width / 2, initialPosition!.y + initialPosition!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(initialPosition!.x + initialPosition!.width / 2 + 36, initialPosition!.y + initialPosition!.height / 2 + 22, { steps: 5 });
+  await page.mouse.up();
+  await expect.poll(async () => {
+    const position = await draggable.boundingBox();
+    return position ? Math.abs(position.x - initialPosition!.x) + Math.abs(position.y - initialPosition!.y) : 0;
+  }).toBeGreaterThan(20);
   await page.getByRole("button", { name: /E-commerce 6 components/ }).click();
   await expect(page.getByLabel("Component name")).toHaveValue("Commerce API");
   await page.getByLabel("Component name").fill("Order API");
@@ -75,6 +93,7 @@ test("sample studio supports editing, history, layout, JSON import, PNG export, 
   await expect(page.locator(".react-flow__node").first()).toBeInViewport();
   await expect(page.locator(".react-flow__node").last()).toBeInViewport();
   expect(errors).toEqual([]);
+  expect(aiRequests).toEqual([]);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
   expect(overflow).toBe(false);
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
