@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CircleHelp, Layers3, LayoutDashboard, Network, Settings } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { WorkspaceMobileMenu } from "@/components/workspace-mobile-menu";
 
 type WorkspaceSection = "setup" | "dashboard" | "project" | "settings";
 type WorkspaceUser = { name: string; workspaceName: string };
@@ -15,14 +16,14 @@ export function WorkspaceShell({ children, active, user, projectId }: { children
       </Link>
       <div className="workspace-switch"><span className="workspace-avatar">{user.name.charAt(0).toUpperCase()}</span><div>{user.workspaceName}<small>Private workspace</small></div></div>
       <div className="nav-label">DESIGN WORKSPACE</div>
-      <nav aria-label="Workspace navigation">
+      <WorkspaceMobileMenu label="Workspace navigation">
         <Link className={active === "dashboard" ? "nav-item active" : "nav-item"} aria-current={active === "dashboard" ? "page" : undefined} href="/dashboard"><LayoutDashboard size={18} />Overview</Link>
         <Link className={active === "dashboard" ? "nav-item" : projectsActive ? "nav-item active" : "nav-item"} href="/dashboard#saved-projects"><Network size={18} />Projects</Link>
         <Link className={active === "project" ? "nav-item active" : "nav-item"} aria-current={active === "project" ? "page" : undefined} href={studioHref}><Layers3 size={18} />Architecture studio</Link>
         <Link className="nav-item" href="/dashboard#templates"><CircleHelp size={18} />Templates</Link>
         <Link className="nav-item" href="/dashboard#workspace-guide"><CircleHelp size={18} />How to use HoloStack</Link>
         <Link className={active === "settings" ? "nav-item active" : "nav-item"} aria-current={active === "settings" ? "page" : undefined} href="/settings"><Settings size={18} />Account settings</Link>
-      </nav>
+      </WorkspaceMobileMenu>
     </aside>
     <div className="workspace-content">
       <header className="topbar">

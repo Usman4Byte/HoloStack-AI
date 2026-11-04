@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Layers3, Menu, X } from "lucide-react";
+import { ArrowRight, Layers3, Menu, UserRound, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const links = [
@@ -24,7 +24,7 @@ export function PublicHeader() {
     <nav id="marketing-navigation" aria-label="Public navigation" className={open ? "open" : ""}>
       {links.map(([label, href]) => <Link key={href} href={href} onClick={close}>{label}</Link>)}
       <Link href="/login" onClick={close}>Log in</Link>
-      <Link className="guest-nav-link" href="/guest" onClick={close}>Continue as guest</Link>
+      <Link className="guest-nav-link" href="/guest" onClick={close}><UserRound size={15} />Continue as guest<ArrowRight size={14} /></Link>
       <Button asChild size="sm"><Link href="/signup" onClick={close}>Get started</Link></Button>
     </nav>
   </header>;

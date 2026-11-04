@@ -172,3 +172,12 @@ Verification: `npm run typecheck`, `npm run lint`, production `npm run build`, a
 - [x] Add a prominent “Continue as guest” path on the marketing hero, mobile/public navigation, login, and signup.
 
 Verification: typecheck, lint, `npm test` (**60/60**), and production build passed. Focused Playwright passed **4/4** light redesign tests and **2/2** authenticated offline-AI tests across desktop/mobile. Browser assertions confirmed guest entry links, no implementation stack names in public/AI/setup copy, no provider/model fields in the AI status payload, and no AI POST from opening the AI tab. No live AI request, database migration, or deployment was part of these checks.
+
+## Mobile navigation and responsive workspace follow-up — 2026-11-05
+
+- [x] Replace always-visible workspace links on tablet/phone with an accessible hamburger menu shared by guest and signed-in shells.
+- [x] Fix narrow guest header actions and storage notice wrapping; refine studio section tabs, actions, and inspector layouts down to 320 CSS pixels.
+- [x] Add a guest navigation link back to the landing page.
+- [x] Show the Usman4Byte attribution and a GitHub/LinkedIn profile menu at both the top and bottom of every page.
+
+Verification: typecheck, lint, and production build passed. The UI Playwright file passed **6/6** across desktop and mobile projects. It checked landing/auth responsiveness down to 320 CSS pixels, guest dashboard overflow at 320, 360, 375, 390, 414, 430, 768, 1024, and 1440 CSS pixels, editor overflow at 320 through 768, hamburger navigation, return-to-home link, and top/footer profile links. A 375px full-page capture was visually reviewed. No database migration, AI provider call, deployment, or repository push was performed.
