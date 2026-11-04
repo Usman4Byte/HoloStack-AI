@@ -34,7 +34,7 @@ export function aiStatus() {
     provider: "Google Gemini" as const,
     model: config.models[0] ?? null,
     models: config.models,
-    message: config.ready ? null : !config.key ? "Add GEMINI_API_KEY in your local environment to enable live AI." : !config.enabled ? "Live AI is off. Enable it only after confirming the Google AI Studio project has no billing enabled." : !config.freeTierConfirmed ? "Confirm your Google AI Studio project is on the free tier and has no billing enabled." : "Choose an allow-listed free-tier Gemini model ID.",
+    message: config.ready ? null : "AI features are temporarily unavailable.",
   };
 }
 
@@ -61,29 +61,29 @@ function geminiResponseSchema(schema: ZodType) {
 export function friendlyProviderError(error: unknown): ApiError {
   const status = statusOf(error);
   // Keep diagnostics to a sanitized category/status only; SDK errors may include request details.
-  if (status === 429) return new ApiError(429, "Gemini’s free-tier quota or rate limit was reached. Try again after the provider resets it.", "AI_PROVIDER_QUOTA");
+  if (status === 429) return new ApiError(429, "The AI service is busy or has reached its current usage allowance. Try again later.", "AI_PROVIDER_QUOTA");
   if (status === 401 || status === 403) {
     console.error("Gemini authentication rejected; credentials withheld.");
-    return new ApiError(503, "Gemini rejected the server configuration. Check the key and model access locally.", "AI_CONFIGURATION");
+    return new ApiError(503, "AI is temporarily unavailable. Please try again later.", "AI_CONFIGURATION");
   }
-  if (status === 404) return new ApiError(503, "The configured Gemini model is unavailable to this project. Check AI Studio model access.", "AI_MODEL_UNAVAILABLE");
+  if (status === 404) return new ApiError(503, "AI is temporarily unavailable. Please try again later.", "AI_MODEL_UNAVAILABLE");
   if (status === 408 || status >= 500 || status === 0) {
     const detail = Number.isInteger(status) && status >= 400 && status <= 599 ? `HTTP ${status}` : "no HTTP status";
     console.error(`Gemini request unavailable (${detail}).`);
-    return new ApiError(503, "Gemini is temporarily unavailable. You can retry this action; each configured model will be tried once.", "AI_PROVIDER_UNAVAILABLE");
+    return new ApiError(503, "AI is temporarily unavailable. You can retry this action.", "AI_PROVIDER_UNAVAILABLE");
   }
   const detail = Number.isInteger(status) && status >= 400 && status <= 599 ? `HTTP ${status}` : "unknown status";
   console.error(`Gemini request rejected (${detail}).`);
-  return new ApiError(502, "Gemini could not complete this model attempt.", "AI_PROVIDER_FAILED");
+  return new ApiError(502, "The AI service could not complete this request.", "AI_PROVIDER_FAILED");
 }
 
 class GeminiProvider implements AIProvider {
   readonly id = "google-gemini";
   async generateStructured<T>(options: StructuredRequest<T>): Promise<StructuredResponse<T>> {
     const config = aiConfiguration();
-    if (!config.ready) throw new ApiError(503, aiStatus().message ?? "Live AI is not configured.", "AI_NOT_CONFIGURED");
+    if (!config.ready) throw new ApiError(503, "AI features are temporarily unavailable.", "AI_NOT_CONFIGURED");
     const model = options.model ?? config.models[0];
-    if (!config.models.includes(model)) throw new ApiError(503, "The selected model is outside the configured Gemini pool.", "AI_NOT_CONFIGURED");
+    if (!config.models.includes(model)) throw new ApiError(503, "AI features are temporarily unavailable.", "AI_NOT_CONFIGURED");
     const client = new GoogleGenAI({ apiKey: config.key, httpOptions: { timeout: 25_000, retryOptions: { attempts: 1 } } });
     const isGemini3 = model.startsWith("gemini-3.");
     const thinkingLevel = (model.endsWith("-lite") ? "MINIMAL" : "LOW") as ThinkingLevel;
@@ -102,12 +102,12 @@ class GeminiProvider implements AIProvider {
       });
     } catch (error) { throw friendlyProviderError(error); }
     const text = response.text;
-    if (!text || text.length > 32_000) throw new ApiError(502, "Gemini returned an empty or oversized response.", "AI_INVALID_OUTPUT");
+    if (!text || text.length > 32_000) throw new ApiError(502, "The AI response was empty or too large to use.", "AI_INVALID_OUTPUT");
     let json: unknown;
     try { json = JSON.parse(text); }
-    catch { throw new ApiError(502, "Gemini returned invalid structured output.", "AI_INVALID_OUTPUT"); }
+    catch { throw new ApiError(502, "The AI response could not be validated. Try again.", "AI_INVALID_OUTPUT"); }
     const result = options.schema.safeParse(json);
-    if (!result.success) throw new ApiError(502, "Gemini’s response did not match the required architecture format.", "AI_INVALID_OUTPUT");
+    if (!result.success) throw new ApiError(502, "The AI response could not be validated. Try again.", "AI_INVALID_OUTPUT");
     return { data: result.data, model, usage: { inputTokens: response.usageMetadata?.promptTokenCount ?? null, outputTokens: response.usageMetadata?.candidatesTokenCount ?? null } };
   }
 }

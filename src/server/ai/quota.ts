@@ -38,7 +38,7 @@ export async function reserveGuestAIAction(address: string) {
   const db = getDb(), day = utcDay(), now = new Date(), secret = process.env.AUTH_SECRET;
   if (!secret || secret.length < 32) throw new ApiError(503, "Anonymous usage tracking is not configured.", "AI_USAGE_UNAVAILABLE");
   const config = aiConfiguration();
-  if (!config.ready) throw new ApiError(503, aiStatus().message ?? "Live AI is not configured.", "AI_NOT_CONFIGURED");
+  if (!config.ready) throw new ApiError(503, "AI features are temporarily unavailable.", "AI_NOT_CONFIGURED");
   const guestKey = guestCounterKey(address, day, secret), globalKey = globalCounterKey(day);
   const rotationKey = `gemini-rotation:${createHash("sha256").update(config.models.join(",")).digest("hex")}`;
   return db.transaction(async tx => {
@@ -67,7 +67,7 @@ export async function reserveGuestAIFallback() {
 export async function reserveAIAction(actor: Actor, projectId: string, feature: "generate" | "copilot" | "optimize", fingerprint: string) {
   const db = getDb(), day = utcDay(), now = new Date();
   const config = aiConfiguration();
-  if (!config.ready) throw new ApiError(503, aiStatus().message ?? "Live AI is not configured.", "AI_NOT_CONFIGURED");
+  if (!config.ready) throw new ApiError(503, "AI features are temporarily unavailable.", "AI_NOT_CONFIGURED");
   const models = config.models;
   const rotationKey = `gemini-rotation:${createHash("sha256").update(models.join(",")).digest("hex")}`;
   const keys = [globalCounterKey(day), userCounterKey(actor.id, day)].sort();

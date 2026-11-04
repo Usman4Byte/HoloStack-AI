@@ -12,7 +12,7 @@ const steps = [
   ["01", "Describe the system", "Start with a blank diagram, an authored template, or a clear product brief."],
   ["02", "Shape the architecture", "Place components, connect real boundaries, and document technologies and assumptions."],
   ["03", "Explore the model", "Adjust traffic inputs and inspect how modeled load flows through the graph."],
-  ["04", "Review the design", "Use deterministic rules for findings; ask Gemini only when you want reasoning."],
+  ["04", "Review the design", "Use deterministic rules for findings; ask AI only when you want contextual reasoning."],
   ["05", "Keep the decisions", "Compare versions, save scenarios, and export a diagram or engineering report."],
 ] as const;
 
@@ -36,9 +36,9 @@ const questions = [
   ["What does HoloStack AI do?", "It gives you a workspace to draw software architecture, document design assumptions, estimate capacity under a modeled workload, run named architecture checks, and review AI proposals."],
   ["Does it generate actual application code?", "No. HoloStack designs and documents architecture graphs. It does not generate, deploy, or operate a production application."],
   ["Are traffic simulations real load tests?", "No. ScaleLab runs deterministic calculations against the graph and explicit capacity assumptions. It does not connect to or measure infrastructure."],
-  ["Can I use the product without AI?", "Yes. Canvas editing, templates, exports, architecture review, version comparison, and ScaleLab do not require Gemini."],
+  ["Can I use the product without AI?", "Yes. Canvas editing, templates, exports, architecture review, version comparison, and ScaleLab work without AI."],
   ["Can I export an architecture?", "Yes. The studio supports validated JSON import/export, PNG diagrams, and Markdown reports."],
-  ["Is there a free demo?", "You can open the guest workspace without signing up. Guest work is stored in this browser tab session; create an account for durable project storage in your TiDB workspace."],
+  ["Is there a free demo?", "You can open the guest workspace without signing up. Guest work is stored in this browser tab session; create an account to keep projects in your workspace across visits."],
 ] as const;
 
 const featured = templates[0];
@@ -57,7 +57,7 @@ export default function HomePage() {
           <h1>Build better <span>systems.</span> Before you code.</h1>
           <p className="welcome-hero-copy">Turn software ideas into interactive architectures. Understand every component, explore capacity under stated assumptions, and improve your design with AI when you ask for it.</p>
           <div className="welcome-actions">
-            <Button asChild><Link href="/guest">Start designing <ArrowRight size={16} /></Link></Button>
+            <Button asChild><Link href="/guest">Continue as guest <ArrowRight size={16} /></Link></Button>
             <Button asChild variant="outline"><Link href="#product-preview">Explore the workspace <ArrowDownRight size={16} /></Link></Button>
           </div>
           <p className="welcome-note"><ShieldCheck size={15} /> Start without an account. Guest projects are kept in this browser session.</p>
@@ -122,6 +122,6 @@ export default function HomePage() {
         <Button asChild><Link href="/guest">Start designing <ArrowRight size={16} /></Link></Button>
       </section>
     </main>
-    <footer className="public-footer"><div><Link href="/" className="brand"><Boxes size={20} /><span>HoloStack<span className="brand-ai">AI</span></span></Link><p>An architecture workspace for clear diagrams, transparent estimates, and reviewed decisions.</p></div><nav aria-label="Footer navigation"><Link href="#features">Features</Link><Link href="#templates">Templates</Link><Link href="/guest">Guest workspace</Link><Link href="/login">Log in</Link><Link href="/signup">Create account</Link></nav><small>© {new Date().getFullYear()} HoloStack AI · Design models, not deployed infrastructure.</small></footer>
+    <footer className="public-footer"><div><Link href="/" className="brand"><Boxes size={20} /><span>HoloStack<span className="brand-ai">AI</span></span></Link><p>An architecture workspace for clear diagrams, transparent estimates, and reviewed decisions.</p></div><nav aria-label="Footer navigation"><Link href="#features">Features</Link><Link href="#templates">Templates</Link><Link href="/guest">Continue as guest</Link><Link href="/login">Log in</Link><Link href="/signup">Create account</Link></nav><small>© {new Date().getFullYear()} HoloStack AI · Design models, not deployed infrastructure.</small></footer>
   </>;
 }

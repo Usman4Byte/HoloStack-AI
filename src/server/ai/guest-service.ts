@@ -22,8 +22,8 @@ async function withGuestModelPool<T>(address: string, run: (model: string) => Pr
       if (!modelFailureCodes.has(safeError.code)) throw safeError;
     }
   }
-  if (lastError instanceof ApiError) throw new ApiError(503, "The configured AI models could not complete this request. Try again later.", "AI_ALL_MODELS_FAILED");
-  throw new ApiError(503, "No configured AI model completed this request.", "AI_ALL_MODELS_FAILED");
+  if (lastError instanceof ApiError) throw new ApiError(503, "AI could not complete this request. Try again later.", "AI_ALL_MODELS_FAILED");
+  throw new ApiError(503, "AI could not complete this request. Try again later.", "AI_ALL_MODELS_FAILED");
 }
 
 export async function generateGuestArchitecture(address: string, requirements: string) {

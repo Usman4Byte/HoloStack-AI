@@ -24,6 +24,7 @@ export function PublicHeader() {
     <nav id="marketing-navigation" aria-label="Public navigation" className={open ? "open" : ""}>
       {links.map(([label, href]) => <Link key={href} href={href} onClick={close}>{label}</Link>)}
       <Link href="/login" onClick={close}>Log in</Link>
+      <Link className="guest-nav-link" href="/guest" onClick={close}>Continue as guest</Link>
       <Button asChild size="sm"><Link href="/signup" onClick={close}>Get started</Link></Button>
     </nav>
   </header>;

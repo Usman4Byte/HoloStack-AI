@@ -84,8 +84,9 @@ describe("server Gemini provider boundary", () => {
 
   it("maps provider quota errors to a safe message without exposing the raw error", () => {
     const mapped = friendlyProviderError({ status: 429, message: "provider-private-detail" });
-    expect(mapped.message).toContain("quota or rate limit");
+    expect(mapped.message).toContain("usage allowance");
     expect(mapped.message).not.toContain("provider-private-detail");
+    expect(mapped.message).not.toMatch(/Gemini|Google|model/i);
     expect(mapped.status).toBe(429);
   });
 });

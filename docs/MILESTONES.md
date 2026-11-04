@@ -163,3 +163,12 @@ Verification: `npm run typecheck`, `npm run lint`, `npm test` (**58/58**), and `
 - [x] Add a route-by-route release audit in [UI redesign audit](UI_REDESIGN_AUDIT.md).
 
 Verification: `npm run typecheck`, `npm run lint`, production `npm run build`, and `npm test` (**58/58**) passed. The focused Playwright redesign suite passed **4/4** using desktop and mobile projects. It checked public preview interactions, no AI calls from the deterministic slider, signup form visibility, guest template deep-link creation, the editable studio and AI tab with no AI POST, and no document-level horizontal overflow at 375, 768, 1024, 1440, and 1920 CSS pixels. Full-page marketing and studio captures at 375 and 1440 pixels were visually inspected. Authenticated database-backed dashboard/settings flows are preserved and were not re-exercised by this focused visual suite; their prior acceptance evidence remains above. No database migration, AI provider request, external deployment, or GitHub push was performed for this UI work.
+
+## Frontend technology privacy and guest onboarding — 2026-11-04
+
+- [x] Remove implementation-provider and database-vendor names from user-facing setup guidance, guest storage messages, usage copy, and authored template labels. Account data remains persisted as before; guest data remains session-scoped.
+- [x] Keep provider/model identifiers server-side: AI status responses now contain only availability and action count, and successful AI responses omit model metadata.
+- [x] Replace detailed AI configuration warnings with a concise availability message while retaining a clear disclosure that submitted prompts and architecture context go to an external AI service.
+- [x] Add a prominent “Continue as guest” path on the marketing hero, mobile/public navigation, login, and signup.
+
+Verification: typecheck, lint, `npm test` (**60/60**), and production build passed. Focused Playwright passed **4/4** light redesign tests and **2/2** authenticated offline-AI tests across desktop/mobile. Browser assertions confirmed guest entry links, no implementation stack names in public/AI/setup copy, no provider/model fields in the AI status payload, and no AI POST from opening the AI tab. No live AI request, database migration, or deployment was part of these checks.

@@ -1,5 +1,6 @@
 import { assistantRequestSchema } from "@/domain/ai/schema";
 import { chatWithArchitecture } from "@/server/ai/service";
+import { publicAIResult } from "@/server/ai/public";
 import { requireActor, requireWriter } from "@/server/auth/session";
 import { clientAddress, rateLimit } from "@/server/auth/rate-limit";
 import { api, assertSameOrigin, json, readJson } from "@/server/http/request";
@@ -11,6 +12,6 @@ export async function POST(request: Request) {
     const actor = await requireActor(); requireWriter(actor);
     await rateLimit("ai-action", `${actor.id}:${clientAddress(request)}`, 3, 60);
     const input = await readJson(request, assistantRequestSchema, 256 * 1024);
-    return json(await chatWithArchitecture(actor, input.projectId, input.graph, input.message, input.mode, input.goal));
+    return json(publicAIResult(await chatWithArchitecture(actor, input.projectId, input.graph, input.message, input.mode, input.goal)));
   });
 }

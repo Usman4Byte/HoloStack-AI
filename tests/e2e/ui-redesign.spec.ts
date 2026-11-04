@@ -5,6 +5,9 @@ test("editorial marketing, responsive auth, and interactive product previews sta
   page.on("request", request => { if (request.method() === "POST" && request.url().includes("/api/ai/")) aiPosts.push(request.url()); });
   await page.goto("/");
   await expect(page.getByRole("heading", { name: /Build better systems/i })).toBeVisible();
+  await expect(page.locator(".welcome-actions").getByRole("link", { name: "Continue as guest" })).toHaveAttribute("href", "/guest");
+  const marketingText = await page.locator("body").innerText();
+  expect(marketingText).not.toMatch(/TiDB|Gemini|Google AI|PostgreSQL|Vercel|Next\.js|Cloudflare/i);
   await expect(page.getByRole("tab", { name: "AI SaaS / RAG" })).toBeVisible();
   await page.getByRole("tab", { name: "Realtime chat" }).click();
   await expect(page.getByRole("img", { name: "Architecture graph for Realtime chat" })).toBeVisible();
@@ -20,6 +23,7 @@ test("editorial marketing, responsive auth, and interactive product previews sta
   const menu = page.getByRole("button", { name: "Open navigation" });
   await menu.click();
   await expect(page.getByRole("button", { name: "Close navigation" })).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Continue as guest" })).toBeVisible();
   await page.getByRole("navigation", { name: "Public navigation" }).getByRole("link", { name: "Templates", exact: true }).click();
   await expect(page).toHaveURL(/#templates$/);
 
@@ -30,6 +34,7 @@ test("editorial marketing, responsive auth, and interactive product previews sta
   expect(aiPosts).toEqual([]);
 
   await page.goto("/signup");
+  await expect(page.getByRole("link", { name: /Continue as guest/ })).toHaveAttribute("href", "/guest");
   await expect(page.getByLabel("Your name")).toBeVisible();
   await expect(page.getByLabel("Confirm password")).toBeVisible();
   await expect(page.getByRole("button", { name: "Show password" })).toBeVisible();
@@ -37,6 +42,8 @@ test("editorial marketing, responsive auth, and interactive product previews sta
     await page.setViewportSize({ width, height: 900 });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   }
+  await page.goto("/login");
+  await expect(page.getByRole("link", { name: /Continue as guest/ })).toHaveAttribute("href", "/guest");
 });
 
 test("guest templates open into an editable light studio without horizontal overflow", async ({ page }) => {
@@ -61,6 +68,8 @@ test("guest templates open into an editable light studio without horizontal over
   await page.getByRole("button", { name: "Scale & review" }).click();
   await expect(page.getByText("DETERMINISTIC ENGINE · NO AI REQUESTS")).toBeVisible();
   await page.getByRole("button", { name: "AI assistant" }).click();
-  await expect(page.getByText(/No HoloStack daily cap/)).toBeVisible();
+  await expect(page.getByText(/AI features are unavailable right now|AI actions today/).first()).toBeVisible();
+  const guestAIText = await page.locator("#ai-workbench").innerText();
+  expect(guestAIText).not.toMatch(/Gemini|Google AI|TiDB|PostgreSQL|gemini-/i);
   expect(aiPosts).toEqual([]);
 });

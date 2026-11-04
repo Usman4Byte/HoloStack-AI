@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight, Check, Database, LockKeyhole, Terminal } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Check, LockKeyhole, ShieldCheck } from "lucide-react";
 import { WorkspaceShell } from "@/components/workspace-shell";
 import { Button } from "@/components/ui/button";
 import { privatePage } from "@/server/http/page";
@@ -8,10 +8,23 @@ export const dynamic = "force-dynamic";
 
 export default async function SetupPage() {
   const { actor } = await privatePage(async () => null);
-  return <WorkspaceShell active="setup" user={actor}><main className="setup-main"><Link href="/dashboard" className="text-link"><ArrowLeft size={14} />Back to workspace</Link><div className="eyebrow">DATABASE / SETUP & READINESS</div><h1>Give your ideas<br /><span>a place to live.</span></h1><p className="setup-lede">Connect a PostgreSQL-compatible TiDB instance. Verify the actual database before introducing application tables.</p><div className="setup-grid"><section className="setup-steps">
-    <article><span className="setup-step">01</span><div><h2>Create the right instance</h2><p>In TiDB Cloud, choose <strong>Create Resource → Starter → PostgreSQL Compatible</strong>. Select <strong>AWS us-east-1</strong> and name it <code>holostack-ai-db</code>.</p><a className="text-link" href="https://tidbcloud.com/" target="_blank" rel="noreferrer">Open TiDB Cloud<ArrowUpRight size={14} /></a></div></article>
-    <article><span className="setup-step">02</span><div><h2>Configure your local secret</h2><p>Open the instance’s <strong>Connect</strong> dialog and generate a password. Put its PostgreSQL URL in <code>.env.local</code> as <code>DATABASE_URL</code>. Use the database, port, and username shown by TiDB; URL-encode special characters in credentials.</p><div className="code-box"><code>DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE?sslmode=verify-full</code></div><p className="subtle">This is a placeholder. Enter the real value only in your local editor. Never paste credentials into chat or commit them.</p></div></article>
-    <article><span className="setup-step">03</span><div><h2>Check connectivity, then compatibility</h2><p>From the project folder, run the commands below in order. The first is read-only. The second creates and removes its own randomly named probe schema, testing the SQL features we intend to use.</p><div className="code-box"><code>npm run db:check<br />npm run db:verify</code></div><p>The secret-free result is written to <code>.local/db-verification.json</code>. No application migration is run by either command.</p></div></article>
-    <article><span className="setup-step">04</span><div><h2>Verified schema and workspace</h2><p>The application, AI workflow, and saved intelligence migrations were each verified in isolated schemas before application. Real signup, tenant-scoped projects, scenarios, revision history, and restore are implemented. Re-run compatibility and exact-schema checks before changing or adding migrations.</p><p>For a live database and application-schema check, open <a className="text-link" href="/api/ready" target="_blank" rel="noreferrer">/api/ready</a>. This endpoint returns only ready/not-ready status; it never includes database details.</p><p className="subtle">The CLI compatibility report is the source of migration evidence. Readiness is a point-in-time check, not uptime monitoring.</p></div></article>
-    </section><aside className="setup-aside"><div className="readiness-card"><Database size={27} className="cyan" /><h3>Connection not verified here</h3><p>This page is an installation guide, not a live database monitor. The local CLI report is the source of verification results.</p><div className="boundary"><LockKeyhole size={15} />Server-only credentials</div><div className="boundary"><Check size={15} />Certificate-verified TLS</div><div className="boundary"><Terminal size={15} />No automatic migrations</div></div><div className="preview-warning"><span className="eyebrow">PREVIEW SERVICE</span><h3>Build for production.<br />Evaluate the database.</h3><p>TiDB’s PostgreSQL-compatible Starter is in public preview without a production SLA. Use development and demo data until recovery, compatibility, and production readiness are verified.</p><a href="https://docs.pingcap.com/tidbcloud/pg-faq/" className="text-link" target="_blank" rel="noreferrer">Provider FAQ<ArrowUpRight size={14} /></a></div></aside></div><Button asChild><Link href="/guest">Try the guest workspace<ArrowUpRight size={15} /></Link></Button></main></WorkspaceShell>;
+  return <WorkspaceShell active="setup" user={actor}><main className="setup-main">
+    <Link href="/dashboard" className="text-link"><ArrowLeft size={14} />Back to workspace</Link>
+    <div className="eyebrow">WORKSPACE OPERATIONS</div>
+    <h1>A reliable foundation<br /><span>for every design.</span></h1>
+    <p className="setup-lede">Core services are configured securely outside the product interface. Use these checks when preparing a workspace or reviewing a release.</p>
+    <div className="setup-grid">
+      <section className="setup-steps">
+        <article><span className="setup-step">01</span><div><h2>Prepare your environment</h2><p>Keep development, preview, and production environments separate. Use private service accounts with only the access each environment needs.</p></div></article>
+        <article><span className="setup-step">02</span><div><h2>Protect configuration</h2><p>Store connection details and AI access credentials in encrypted, server-side deployment settings. Never place secrets in browser code, architecture diagrams, prompts, or source control.</p></div></article>
+        <article><span className="setup-step">03</span><div><h2>Verify before changes</h2><p>Confirm service connectivity and compatibility before changing production data. HoloStack does not apply infrastructure or data-schema changes automatically.</p></div></article>
+        <article><span className="setup-step">04</span><div><h2>Plan for operations</h2><p>Before production use, assign an owner for availability monitoring, recovery checks, and incident response. This page does not expose live infrastructure details.</p></div></article>
+      </section>
+      <aside className="setup-aside">
+        <div className="readiness-card"><ShieldCheck size={27} className="setup-icon" /><h3>Private by design</h3><p>Workspace members see product capabilities and project data, not deployment credentials or internal service configuration.</p><div className="boundary"><LockKeyhole size={15} />Sensitive settings stay server-side</div><div className="boundary"><Check size={15} />Changes require explicit action</div><div className="boundary"><Check size={15} />Guest work stays in its browser session</div></div>
+        <div className="preview-warning"><span className="eyebrow">PRODUCTION READINESS</span><h3>Review the safeguards<br />before launch.</h3><p>Availability, recovery, and service ownership should be verified for the environment where the application runs.</p><Link href="/settings" className="text-link">Review account security<ArrowUpRight size={14} /></Link></div>
+      </aside>
+    </div>
+    <Button asChild><Link href="/guest">Try the guest workspace<ArrowUpRight size={15} /></Link></Button>
+  </main></WorkspaceShell>;
 }

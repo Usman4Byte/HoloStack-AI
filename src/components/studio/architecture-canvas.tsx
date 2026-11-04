@@ -39,7 +39,7 @@ function snapshotGraph(base: Architecture, nodes: CanvasNode[], edges: ReturnTyp
 function newComponent(type: ComponentType, position: XYPosition): ArchitectureNode {
   const label = labels[type];
   return {
-    id: `node-${crypto.randomUUID()}`, type, label, technology: type === "database" ? "PostgreSQL-compatible" : type === "service" || type === "web-app" ? "Next.js" : "Define a technology",
+    id: `node-${crypto.randomUUID()}`, type, label, technology: type === "database" ? "Managed SQL" : "Choose a technology",
     description: `${label} responsibilities and operational boundaries are assumptions to define for this design.`, position,
     capacityAssumptions: { maxRps: type === "database" ? 800 : type === "ai" ? 50 : 2000, replicas: 1, cacheHitRatio: type === "cache" ? 0.8 : 0 },
     metadata: { trustBoundary: ["client", "cdn", "external-api"].includes(type) ? "public" : ["ai"].includes(type) ? "external" : "private", notes: "Capacity values are editable assumptions, not measurements." },

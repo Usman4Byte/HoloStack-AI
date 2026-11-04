@@ -45,7 +45,7 @@ async function tracked<T extends { usage: TokenUsage }>(actor: Actor, projectId:
       await finishAIAction({ usageId, status: "succeeded", ...result.usage });
       return result;
     }
-    throw new ApiError(503, "None of the configured Gemini models could complete this request. Try again later.", "AI_ALL_MODELS_FAILED");
+    throw new ApiError(503, "AI could not complete this request. Try again later.", "AI_ALL_MODELS_FAILED");
   } finally {
     try { await releaseAIRequestLock(reservation.requestLockKey, reservation.expiresAt); }
     catch { console.error("AI duplicate-request lock cleanup failed; its short expiry will release it."); }
@@ -61,7 +61,7 @@ export async function generateArchitecture(actor: Actor, projectId: string, requ
     });
     let graph: Architecture;
     try { graph = buildGeneratedArchitecture(result.data, randomUUID().replaceAll("-", "").slice(0, 32), new Date().toISOString()); }
-    catch { throw new ApiError(502, "Gemini’s architecture failed graph integrity checks.", "AI_INVALID_GRAPH"); }
+    catch { throw new ApiError(502, "The proposed architecture failed graph integrity checks.", "AI_INVALID_GRAPH"); }
     const artifactId = await saveAIArtifact(actor, { usageId, projectId, kind: "generation", payload: { graph, tradeoffs: result.data.tradeoffs } });
     return { graph, tradeoffs: result.data.tradeoffs, artifactId, usage: result.usage, model: result.model };
   });
@@ -94,7 +94,7 @@ async function runAssistant(actor: Actor, projectId: string, currentGraph: Archi
     let candidate: Architecture | null = null;
     if (result.data.changes.length) {
       try { candidate = applyArchitectureChanges(graph, result.data.changes); }
-      catch { throw new ApiError(502, "Gemini’s proposed graph changes failed validation. The saved architecture was not changed.", "AI_INVALID_PROPOSAL"); }
+      catch { throw new ApiError(502, "The proposed graph changes failed validation. The saved architecture was not changed.", "AI_INVALID_PROPOSAL"); }
     } else if (mode !== "ask") {
       // Optimization/change requests that return prose only are still useful, but are not presented as an applied graph proposal.
     }

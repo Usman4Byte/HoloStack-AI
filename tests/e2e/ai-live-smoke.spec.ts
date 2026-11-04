@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { architectureSchema } from "@/domain/architecture/schema";
 import { account, headers } from "./fixtures";
 
-test("one explicitly enabled Gemini action returns a renderable HoloCanvas graph", async ({ request }, info) => {
+test("one explicitly enabled AI action returns a renderable HoloCanvas graph without exposing model metadata", async ({ request }, info) => {
   test.skip(info.project.name !== "desktop", "The real-provider smoke test runs once, not once per browser viewport.");
   test.skip(process.env.HOLOSTACK_LIVE_AI_SMOKE !== "true", "Set HOLOSTACK_LIVE_AI_SMOKE=true for an explicit live verification.");
   test.skip(process.env.GEMINI_ENABLED !== "true" || process.env.GEMINI_FREE_TIER_CONFIRMED !== "true" || !process.env.GEMINI_API_KEY, "No live Gemini call unless the developer explicitly configures and confirms the free-tier key.");
@@ -15,8 +15,7 @@ test("one explicitly enabled Gemini action returns a renderable HoloCanvas graph
   expect(result.status()).toBe(201);
   const response = await result.json();
   expect(architectureSchema.safeParse(response.graph).success).toBe(true);
-  expect(typeof response.model).toBe("string");
-  expect(response.model).toMatch(/^gemini-[a-z0-9.-]+$/);
+  expect(response).not.toHaveProperty("model");
   expect(response.graph.nodes.length).toBeGreaterThan(0);
   expect(email).toMatch(/^e2e-/);
   console.log(`Live Gemini graph validated with ${response.model}.`);
