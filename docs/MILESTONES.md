@@ -26,7 +26,7 @@ Updated: 2026-11-04 (Asia/Karachi). This file distinguishes implemented function
 - Dependency audit: production dependencies have zero reported vulnerabilities. There are 16 moderate development-tool findings propagated from minimatch in the ESLint toolchain. Do not use `npm audit fix --force`: it proposes incompatible downgrades. This remains a development-tool maintenance item.
 - Application migration checkpoint was exercised and correctly refused to apply a not-yet-authored schema.
 
-Milestone 1 is complete. The password supplied in chat was saved locally at the user's request; rotate it in TiDB and update `.env.local` before sharing or deploying. The local workspace is a sample; authentication and cloud persistence are still Milestone 2 work.
+Milestone 1 is complete. The password supplied in chat was saved locally at the user's request; rotate it in TiDB and update `.env.local` before sharing or deploying. At the end of Milestone 1, the workspace remained sample-only; authentication and cloud persistence were completed in Milestone 2.
 
 ## Milestone 2 — functional SaaS skeleton
 
@@ -49,13 +49,22 @@ The DB-backed end-to-end suite passed **8/8** on desktop and mobile; this covers
 
 Unit tests: **17 passed**. `npm run typecheck`, `npm run lint`, and `npm run build` passed. A source scan across 82 tracked/untracked code, docs, and config files found zero matches for the database credential markers or API-key marker pattern. `.env.local` remains Git-ignored and was not included in the scan output. No Vercel deployment was performed.
 
-Milestone 2 application work and checks are complete. Commit `8c61649` was pushed to the requested private GitHub repository; the local tree is clean.
+Milestone 2 application work and checks are complete. Commit `75235ae` is the current pushed baseline in the requested private GitHub repository.
 
 ## Milestone 3 — full visual studio
 
-- [x] Starter XYFlow canvas, drag/edit/select/connect/delete, inspector, minimap, zoom, animated edges, JSON export.
-- [ ] Add full node palette, robust undo/redo, graph import with byte limits, PNG export, generated layout, autosave and 409 conflict handling.
-- [ ] Complete keyboard workflows and accessibility audit.
+- [x] Full 16-type palette, drag/edit/select/connect/delete, component inspector, animated edges, minimap, zoom, fit view and generated layout.
+- [x] Snapshot-based undo/redo with keyboard and button controls, including batched node-drag history.
+- [x] Strict JSON import with a 256 KiB UTF-8 cap and graph schema validation; draft JSON export.
+- [x] Bounded, self-contained PNG export with escaped architecture text and a clear design-model footer.
+- [x] Debounced 850 ms project autosave, revision-aware save sequencing, conflict draft preservation/reload, manual retry for transient failures, and unsaved-navigation protection.
+- [x] Keyboard undo/redo, delete shortcuts, labeled palette/actions, reduced-motion support, and desktop/mobile no-overflow and canvas-visibility checks.
+
+### Milestone 3 verification evidence
+
+Unit tests: **21 passed** across four files, including deterministic bounded layout with cyclic graphs, schema-validated/size-capped imports, and XML-safe SVG generation. Production build, typecheck, and lint passed. The complete production-browser suite passed **8/8** on desktop and mobile, covering TiDB autosave and 409 conflict recovery along with keyboard history, palette actions, JSON import, real PNG signature/export, responsive rendering, and reset. After visually inspecting the generated mobile screenshot, a viewport reset defect was fixed; the focused studio/setup suite then passed **4/4**, with explicit assertions that components remain in view after reset and selected-node Delete/undo works from the focused canvas.
+
+No AI generation, measured performance data, or infrastructure provisioning is part of this milestone.
 
 ## Milestone 4 — AI workflows
 
@@ -75,6 +84,6 @@ Milestone 2 application work and checks are complete. Commit `8c61649` was pushe
 - [x] Complete end-to-end acceptance flow from sign-in to protected-project logout.
 - [ ] Auth/persistence/AI boundary tests, rate-limit and concurrency validation, recovery rehearsal, production monitoring.
 - [ ] Marketing/onboarding polish and truthful feature availability.
-- [x] Existing GitHub repo was explicitly requested and Milestone 1 was pushed. Push subsequent milestones after local review; Vercel deployment still needs explicit approval.
+- [x] Existing GitHub repo was explicitly requested; Milestones 1–2 were pushed. Push this reviewed milestone update; Vercel deployment still needs explicit approval.
 
 P1/P2 modules remain roadmap-only; see `ARCHITECTURE.md`.

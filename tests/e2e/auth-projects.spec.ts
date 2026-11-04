@@ -9,7 +9,13 @@ test("sign up, save a project, reopen it, manage its lifecycle, and sign out", a
   await page.getByLabel("Email address").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Create account", exact: true }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
+  try { await page.waitForURL(/\/dashboard$/, { timeout: 15_000 }); }
+  catch (error) {
+    await expect(page.getByRole("alert")).toHaveText("The service is temporarily unavailable. Please retry.");
+    await page.getByRole("button", { name: "Create account", exact: true }).click();
+    try { await page.waitForURL(/\/dashboard$/, { timeout: 15_000 }); }
+    catch { throw error; }
+  }
   await page.getByRole("button", { name: "New project", exact: true }).click();
   await page.getByLabel("Project name", { exact: true }).fill("My test architecture");
   await page.getByLabel("Description", { exact: true }).fill("A private design persisted in TiDB.");
@@ -19,14 +25,22 @@ test("sign up, save a project, reopen it, manage its lifecycle, and sign out", a
   await page.getByLabel("Component name", { exact: true }).fill("Private application API");
   await page.getByLabel("Engineering notes").fill("Use explicit workspace authorization.");
   await page.getByLabel("Project name", { exact: true }).fill("Renamed architecture");
-  await page.getByRole("button", { name: "Save project", exact: true }).click();
-  await expect(page.getByRole("status").filter({ hasText: "Saved to your workspace" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Saved to your workspace · Version 2" })).toBeVisible({ timeout: 15_000 });
   await page.reload();
   await expect(page.getByLabel("Component name", { exact: true })).toHaveValue("Private application API");
   await expect(page.getByLabel("Engineering notes")).toHaveValue("Use explicit workspace authorization.");
   await expect(page.getByRole("heading", { name: "Renamed architecture", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "View recent versions" }).click();
   await expect(page.locator(".version-list li")).toHaveCount(2);
+  const externalSave = await page.request.patch(`/api/projects/${new URL(projectUrl).pathname.split("/").at(-1)}`, { headers: { Origin: "http://localhost:3100" }, data: { revision: 2, notes: "Competing tab edit" } });
+  expect(externalSave.status()).toBe(200);
+  await page.getByLabel("Component name", { exact: true }).fill("Local conflict draft");
+  await expect(page.getByRole("status").filter({ hasText: "changed in another tab" })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByLabel("Component name", { exact: true })).toHaveValue("Local conflict draft");
+  page.once("dialog", dialog => dialog.accept());
+  await page.getByRole("button", { name: "Reload latest" }).click();
+  await expect(page.getByLabel("Component name", { exact: true })).toHaveValue("Private application API");
+  await expect(page.getByLabel("Engineering notes")).toHaveValue("Competing tab edit");
   await page.getByRole("link", { name: "All projects" }).click();
   await page.getByRole("button", { name: "Duplicate Renamed architecture", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Renamed architecture (copy)", exact: true })).toBeVisible();

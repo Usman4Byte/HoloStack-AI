@@ -4,7 +4,7 @@ An architecture design and intelligence workspace, built as one Next.js App Rout
 
 ## Current scope
 
-Milestones 1 and 2: foundation, real TiDB integration, email/password authentication, server-side sessions, a private dashboard, project persistence, version snapshots, and account settings. The workspace at `/` is still a clearly labeled public sample, with seven authored templates and an editable XYFlow graph. Sign in to create private projects from those templates. Project diagram, details, and notes save together when you click **Save project**; optimistic revision checks reject stale writes. AI generation, autosave, history restoration, simulation, and optimization are **not implemented yet**. `/api/health` is liveness only, not database readiness.
+Milestones 1–3: foundation, real TiDB integration, email/password authentication, server-side sessions, a private dashboard, project persistence, version snapshots, and a full architecture studio. The workspace at `/` is still a clearly labeled public sample, with seven authored templates and an editable XYFlow graph. HoloCanvas includes a 16-type node palette, undo/redo, generated layout, bounded JSON import, and PNG/JSON export. Private projects autosave after 850 ms of inactivity with optimistic revision checks; conflicting drafts are preserved until the owner reloads. AI generation, ScaleLab simulation, AI review, history restoration, and optimization are **not implemented yet**. `/api/health` is liveness only, not database readiness.
 
 ## Local development
 
@@ -25,7 +25,7 @@ Open http://localhost:3000. Do not overwrite an existing `.env.local`. Environme
 3. Set `DATABASE_URL` privately in `.env.local`. Replace every placeholder and percent-encode special characters in credentials. `DATABASE_CA_CERT` optionally accepts a provider CA PEM; do not disable TLS validation.
 4. Run `npm run db:check` for a read-only, certificate-verified `SELECT 1`.
 5. Run `npm run db:verify` for isolated compatibility probes. These create randomly named scratch objects, use synthetic data, then remove only those objects. A failed cleanup names the scratch schema for manual inspection. No user tables are touched.
-6. Review `.local/db-verification.json` before implementing application migrations. Never run migrations automatically at app startup, build time, or in a public API route.
+6. Review `.local/db-verification.json`; migrations must never run automatically at app startup, build time, or in a public API route. The first reviewed application migration is already applied to the `holostack` schema.
 7. For a new database target or migration, run `npm run db:verify-schema` to test the exact checked-in DDL and a concurrent counter. Review `.local/schema-verification.json`, then run `npm run db:migrate` as a controlled operator action. The runner verifies target, freshness, and migration file hash.
 
 Connection errors intentionally omit raw driver messages and credentials. SQLSTATE categories are retained when safe. The database pool is lazy, server-only, bounded to three connections per warm function instance, and configured with acquisition and query timeouts. Fleet-wide connection usage still needs load testing.
@@ -47,9 +47,9 @@ Playwright runs desktop and mobile viewport tests in installed Microsoft Edge on
 ## Code map
 
 - `src/app`: pages, layouts, boundaries, and Node.js route handlers.
-- `src/components/studio`: sample canvas and inspector.
+- `src/components/studio`: HoloCanvas editing controls and component inspector.
 - `src/components/ui`: local shadcn-style primitives.
-- `src/domain/architecture`: strict Zod graph schemas and seven authored templates.
+- `src/domain/architecture`: strict Zod graph schemas, bounded studio operations, and seven authored templates.
 - `src/server/db`: server-only connection infrastructure and shared CLI configuration.
 - `scripts`: credential-safe connection and isolated capability checks.
 - `tests/unit`, `tests/e2e`: trust-boundary tests and browser flows.
