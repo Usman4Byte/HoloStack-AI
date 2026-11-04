@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "@xyflow/react/dist/style.css";
 import "./globals.css";
+import "./workspace.css";
 
 export const metadata: Metadata = { title: "HoloStack AI — Architecture workspace", description: "Design it. Understand it. Stress-test it. Optimize it. Ship it. An intelligent workspace for software architecture." };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

@@ -4,9 +4,7 @@ An architecture design and intelligence workspace, built as one Next.js App Rout
 
 ## Current scope
 
-Milestone 1: application foundation and real TiDB compatibility verification. The workspace at `/` is a clearly labeled local sample, with seven authored templates, editable/drag-enabled XYFlow graphs, connections, a component inspector, reset, and validated JSON export. Sample edits are in memory and are lost when reloading or switching templates. The `/setup` guide explains provider configuration. `/api/health` is liveness only, not database readiness.
-
-Authentication, persisted projects, AI generation, simulation, and optimization are **not implemented yet**. The sample is not a signed-in account, live infrastructure, AI output, or a performance measurement. See `docs/MILESTONES.md` for evidence and next work.
+Milestones 1 and 2: foundation, real TiDB integration, email/password authentication, server-side sessions, a private dashboard, project persistence, version snapshots, and account settings. The workspace at `/` is still a clearly labeled public sample, with seven authored templates and an editable XYFlow graph. Sign in to create private projects from those templates. Project diagram, details, and notes save together when you click **Save project**; optimistic revision checks reject stale writes. AI generation, autosave, history restoration, simulation, and optimization are **not implemented yet**. `/api/health` is liveness only, not database readiness.
 
 ## Local development
 
@@ -28,6 +26,7 @@ Open http://localhost:3000. Do not overwrite an existing `.env.local`. Environme
 4. Run `npm run db:check` for a read-only, certificate-verified `SELECT 1`.
 5. Run `npm run db:verify` for isolated compatibility probes. These create randomly named scratch objects, use synthetic data, then remove only those objects. A failed cleanup names the scratch schema for manual inspection. No user tables are touched.
 6. Review `.local/db-verification.json` before implementing application migrations. Never run migrations automatically at app startup, build time, or in a public API route.
+7. For a new database target or migration, run `npm run db:verify-schema` to test the exact checked-in DDL and a concurrent counter. Review `.local/schema-verification.json`, then run `npm run db:migrate` as a controlled operator action. The runner verifies target, freshness, and migration file hash.
 
 Connection errors intentionally omit raw driver messages and credentials. SQLSTATE categories are retained when safe. The database pool is lazy, server-only, bounded to three connections per warm function instance, and configured with acquisition and query timeouts. Fleet-wide connection usage still needs load testing.
 
@@ -43,7 +42,7 @@ npm run build
 npm run test:e2e
 ```
 
-Playwright runs desktop and mobile viewport tests in installed Microsoft Edge on Windows and Chromium elsewhere. On Linux CI, install Chromium with `npx playwright install --with-deps chromium`. Override the browser channel with `PLAYWRIGHT_CHANNEL` if needed. A production build is required before the E2E suite; the config starts `next start` if port 3000 is not already serving the app.
+Playwright runs desktop and mobile viewport tests in installed Microsoft Edge on Windows and Chromium elsewhere. On Linux CI, install Chromium with `npx playwright install --with-deps chromium`. Override the browser channel with `PLAYWRIGHT_CHANNEL` if needed. Build before the E2E suite. Auth and project integration tests use randomly named `.invalid` email fixtures against TiDB and remove only those fixtures in global teardown; read `tests/e2e/cleanup.ts` before adapting or changing the prefix.
 
 ## Code map
 
