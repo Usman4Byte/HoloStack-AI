@@ -55,7 +55,9 @@ export async function api(run: () => Promise<Response>): Promise<Response> {
       return response;
     }
     // Never serialize Drizzle errors: they may contain SQL parameters and password hashes.
-    console.error("Server operation failed; sensitive details withheld.");
+    const name = error instanceof Error ? error.name.replace(/[^A-Za-z0-9_]/g, "").slice(0, 48) : "UnknownError";
+    const code = typeof error === "object" && error !== null && "code" in error && typeof error.code === "string" && /^[A-Z0-9_]{2,40}$/.test(error.code) ? error.code : "UNCLASSIFIED";
+    console.error(`Server operation failed (${name}, ${code}); sensitive details withheld.`);
     return json({ error: "The service is temporarily unavailable. Please retry.", code: "SERVICE_UNAVAILABLE" }, 503);
   }
 }

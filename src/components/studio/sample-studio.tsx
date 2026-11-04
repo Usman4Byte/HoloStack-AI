@@ -44,7 +44,12 @@ function newComponent(type: ComponentType, position: XYPosition): ArchitectureNo
   };
 }
 function fitCanvasAfterUpdate() {
-  requestAnimationFrame(() => requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(".canvas-palette [aria-label='Fit architecture to view']")?.click()));
+  const afterPaint = (frames: number) => requestAnimationFrame(() => {
+    if (frames > 1) afterPaint(frames - 1);
+    else document.querySelector<HTMLButtonElement>(".canvas-palette [aria-label='Fit architecture to view']")?.click();
+  });
+  // Let React Flow commit node measurements before asking its viewport to fit them.
+  afterPaint(4);
 }
 
 function CanvasPalette({ disabled, onAdd, onLayout }: { disabled: boolean; onAdd: (type: ComponentType, position: XYPosition) => void; onLayout: () => void }) {
@@ -66,7 +71,7 @@ function CanvasPalette({ disabled, onAdd, onLayout }: { disabled: boolean; onAdd
   </Panel>;
 }
 
-export function Canvas({ template, onSave, saving = false, readOnly = false, onDirty, onChange, onValidationChange }: { template: Architecture; onSave?: (graph: Architecture) => Promise<void>; saving?: boolean; readOnly?: boolean; onDirty?: () => void; onChange?: (graph: Architecture) => void; onValidationChange?: (valid: boolean) => void }) {
+export function Canvas({ template, onSave, saving = false, readOnly = false, onDirty, onChange, onValidationChange, incomingGraph }: { template: Architecture; onSave?: (graph: Architecture) => Promise<void>; saving?: boolean; readOnly?: boolean; onDirty?: () => void; onChange?: (graph: Architecture) => void; onValidationChange?: (valid: boolean) => void; incomingGraph?: { graph: Architecture; sequence: number } | null }) {
   const [baseGraph, setBaseGraph] = useState(template);
   const [nodes, setNodes, onNodesChange] = useNodesState<CanvasNode>(makeNodes(template));
   const [edges, setEdges, onEdgesChange] = useEdgesState(makeEdges(template));
@@ -77,6 +82,7 @@ export function Canvas({ template, onSave, saving = false, readOnly = false, onD
   const studioRef = useRef<HTMLElement>(null), importInputRef = useRef<HTMLInputElement>(null);
   const graphRef = useRef<Architecture>(template), undoRef = useRef<Architecture[]>([]), redoRef = useRef<Architecture[]>([]);
   const dragSnapshotRef = useRef<Architecture | null>(null), dragHistoryRecordedRef = useRef(false);
+  const appliedIncomingRef = useRef(0);
   const selected = nodes.find(node => node.id === selectedId)?.data.component;
   const publishHistory = useCallback(() => setHistoryCounts({ undo: undoRef.current.length, redo: redoRef.current.length }), []);
   const pushUndo = useCallback((graph: Architecture) => {
@@ -108,6 +114,13 @@ export function Canvas({ template, onSave, saving = false, readOnly = false, onD
     onChange?.(graph); onDirty?.(); onValidationChange?.(true);
     if (fitView) fitCanvasAfterUpdate();
   }, [onChange, onDirty, onValidationChange, setEdges, setNodes]);
+  useEffect(() => {
+    if (!incomingGraph || incomingGraph.sequence === appliedIncomingRef.current) return;
+    appliedIncomingRef.current = incomingGraph.sequence;
+    pushUndo(graphRef.current);
+    restoreGraph(incomingGraph.graph, true);
+    setNotice("Approved AI candidate loaded into the canvas. Review the design; it will autosave to this project.");
+  }, [incomingGraph, pushUndo, restoreGraph]);
   const undo = useCallback(() => {
     const previous = undoRef.current.pop();
     if (!previous) return;
@@ -251,7 +264,7 @@ export function SampleStudio() {
     <section id="templates" className="templates-section"><div className="section-heading"><div><h2>Start with a blueprint <span>07</span></h2><p>Real patterns. Explicit assumptions. A starting point for your thinking.</p></div><span className="section-meta">LOCALLY AUTHORED TEMPLATES</span></div><div className="template-grid">{templates.map((template, index) => { const Icon = [Sparkles, Globe, Network, Cloud, Braces, Workflow, Zap][index]; return <button key={template.id} className={`template-card ${selectedTemplate.id === template.id ? "template-active" : ""}`} onClick={() => { setSelectedTemplate(template); setRevision(value => value + 1); }} aria-pressed={selectedTemplate.id === template.id}><span className={`template-icon template-icon-${index}`}><Icon size={19} /></span><strong>{template.name}</strong><span>{template.nodes.length} components <ChevronRight size={13} /></span></button>; })}</div></section>
     <div className="section-heading canvas-heading"><div><h2>Your system, connected.</h2><p>A working canvas to explore structure and intent.</p></div><span className="sample-mode"><span />Sample mode · not saved</span></div>
     <Canvas key={`${selectedTemplate.id}-${revision}`} template={selectedTemplate} />
-    <div className="workspace-note"><ShieldCheck size={16} /><p>Designed for honest engineering. Samples are authored fixtures; capacity assumptions are not measured performance. Sign in for private saved projects. AI generation and simulation are upcoming milestones.</p><a href="/setup">Build status<ArrowUpRightIcon /></a></div>
+    <div className="workspace-note"><ShieldCheck size={16} /><p>Designed for honest engineering. Samples are authored fixtures; capacity assumptions are not measured performance. Sign in to use the private AI workbench when Gemini is configured. Templates and canvas interactions never call AI.</p><a href="/setup">Build status<ArrowUpRightIcon /></a></div>
   </main>;
 }
 function ArrowUpRightIcon() { return <ArrowRight size={14} style={{ transform: "rotate(-45deg)" }} />; }

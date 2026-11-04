@@ -4,7 +4,7 @@ An architecture design and intelligence workspace, built as one Next.js App Rout
 
 ## Current scope
 
-Milestones 1–3: foundation, real TiDB integration, email/password authentication, server-side sessions, a private dashboard, project persistence, version snapshots, and a full architecture studio. The workspace at `/` is still a clearly labeled public sample, with seven authored templates and an editable XYFlow graph. HoloCanvas includes a 16-type node palette, undo/redo, generated layout, bounded JSON import, and PNG/JSON export. Private projects autosave after 850 ms of inactivity with optimistic revision checks; conflicting drafts are preserved until the owner reloads. AI generation, ScaleLab simulation, AI review, history restoration, and optimization are **not implemented yet**. `/api/health` is liveness only, not database readiness.
+Milestones 1–4: foundation, real TiDB integration, email/password authentication, server-side sessions, private project persistence/version snapshots, full architecture studio, and the explicit Gemini architecture workbench. The workspace at `/` remains a clearly labeled public sample with seven authored templates and an editable XYFlow graph. HoloCanvas includes a 16-type palette, undo/redo, deterministic layout, bounded JSON import, and PNG/JSON export. Private projects autosave with revision checks. Authenticated project owners can request architecture generation, explanations, copilot patches, and optimization candidates; every candidate is schema-validated and reviewed before applying. AI remains fail-closed until a server key and both opt-in flags are configured. ScaleLab and deterministic risk review are future Module 5 work. `/api/health` is liveness only, not database readiness.
 
 ## Local development
 
@@ -48,12 +48,17 @@ Playwright runs desktop and mobile viewport tests in installed Microsoft Edge on
 
 - `src/app`: pages, layouts, boundaries, and Node.js route handlers.
 - `src/components/studio`: HoloCanvas editing controls and component inspector.
+- `src/components/ai`: consent-gated, quota-aware AI workbench and saved candidate review.
+- `src/domain/ai`: strict AI request/response schemas, graph patch application, and deterministic diffs.
+- `src/server/ai`: server-only Gemini provider, transactional quotas, usage records, and scoped chat/artifact persistence.
 - `src/components/ui`: local shadcn-style primitives.
 - `src/domain/architecture`: strict Zod graph schemas, bounded studio operations, and seven authored templates.
 - `src/server/db`: server-only connection infrastructure and shared CLI configuration.
 - `scripts`: credential-safe connection and isolated capability checks.
 - `tests/unit`, `tests/e2e`: trust-boundary tests and browser flows.
-- `docs`: milestone evidence, architecture decisions, and deployment preparation.
+- `docs`: milestone evidence, AI privacy/quota controls, architecture decisions, and deployment preparation.
+
+See [AI integration and zero-budget controls](docs/AI_INTEGRATION.md) for local provider setup, Google AI Studio billing caveats, data-sharing consent, and the opt-in live smoke test.
 
 ## Deployment
 

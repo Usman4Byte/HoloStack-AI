@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Clock3, FileText, RotateCcw } from "lucide-react";
 import { Canvas } from "@/components/studio/sample-studio";
+import { AIWorkbench } from "@/components/ai/ai-workbench";
 import { Button } from "@/components/ui/button";
 import type { ProjectDocument } from "@/domain/projects/schema";
 import type { Architecture } from "@/domain/architecture/schema";
@@ -12,6 +13,9 @@ type Draft = { graph: Architecture; name: string; description: string; notes: st
 
 export function ProjectEditor({ initial }: { initial: ProjectDocument }) {
   const [project, setProject] = useState(initial);
+  const [currentGraph, setCurrentGraph] = useState(initial.graph);
+  const [approvedGraph, setApprovedGraph] = useState<{ graph: Architecture; sequence: number } | null>(null);
+  const approvedSequence = useRef(0);
   const [name, setName] = useState(initial.name), [description, setDescription] = useState(initial.description), [notes, setNotes] = useState(initial.notes);
   const [dirty, setDirty] = useState(false), [busy, setBusy] = useState(false), [message, setMessage] = useState(""), [graphValid, setGraphValid] = useState(true);
   const [conflict, setConflict] = useState(false), [history, setHistory] = useState<{ revision: number; change: string; createdAt: string }[] | null>(null);
@@ -27,7 +31,7 @@ export function ProjectEditor({ initial }: { initial: ProjectDocument }) {
     if (!conflict) setMessage("");
   }, [conflict]);
   const markDirty = useCallback(() => { dirtyRef.current = true; setDirty(true); }, []);
-  const updateGraph = useCallback((graph: Architecture) => { setProject(current => ({ ...current, graph })); markDraft({ graph }); }, [markDraft]);
+  const updateGraph = useCallback((graph: Architecture) => { setProject(current => ({ ...current, graph })); setCurrentGraph(graph); markDraft({ graph }); }, [markDraft]);
 
   const save = useCallback(async (manualRetry = false, candidate?: Architecture) => {
     if (readOnly || inFlight.current || !dirtyRef.current || !graphValid || conflict) return;
@@ -84,7 +88,8 @@ export function ProjectEditor({ initial }: { initial: ProjectDocument }) {
   return <main className="overview-main project-editor"><Link className="text-link" href="/dashboard"><ArrowLeft size={14} />All projects</Link><div className="page-heading"><div><span className="eyebrow">PRIVATE DESIGN / VERSION {project.revision}</span><h1>{name}</h1><p>{readOnly ? `This project is ${project.status === "deleted" ? "in Trash" : "archived"}. Restore it from the dashboard to edit.` : "Explore the architecture. Changes save automatically with revision checks."}</p></div><span className={`save-status ${dirty ? "unsaved" : ""}`} aria-live="polite"><CheckCircle2 size={14} />{busy ? "Saving…" : dirty ? "Draft changes" : "Saved to workspace"}</span></div>
     {message && <div className={conflict ? "conflict-message" : "action-message"} role="status">{message}{conflict && <><p>Your edits remain in this tab. Download the JSON draft before reloading if you need a portable copy.</p><Button variant="outline" size="sm" onClick={() => { if (window.confirm("Reload the latest saved project? Your local edits will be lost.")) window.location.reload(); }}><RotateCcw size={14} />Reload latest</Button></>}</div>}
     {dirty && <div className="autosave-hint" role="status">{!graphValid ? "Complete valid component fields to resume autosave." : busy ? "Saving your latest draft…" : "Autosave runs after 850 ms of inactivity."}{retrySequence !== null && !conflict && <Button variant="outline" size="sm" onClick={() => void save(true)}>Retry save</Button>}</div>}
-    <Canvas template={initial.graph} onSave={graph => save(true, graph)} saving={busy} readOnly={readOnly} onDirty={markDirty} onChange={updateGraph} onValidationChange={setGraphValid} />
+    <AIWorkbench projectId={initial.id} graph={currentGraph} disabled={readOnly || !graphValid || conflict} onApply={graph => setApprovedGraph({ graph, sequence: ++approvedSequence.current })} />
+    <Canvas template={initial.graph} incomingGraph={approvedGraph} onSave={graph => save(true, graph)} saving={busy} readOnly={readOnly} onDirty={markDirty} onChange={updateGraph} onValidationChange={setGraphValid} />
     <div className="project-details-grid"><section className="details-panel"><h2><FileText size={17} />Project details</h2><div className="stack-form"><label>Project name<input value={name} onChange={event => updateField("name", event.target.value)} maxLength={120} disabled={readOnly} /></label><label>Description<textarea rows={3} value={description} onChange={event => updateField("description", event.target.value)} maxLength={4000} disabled={readOnly} /></label><label>Engineering notes<textarea rows={5} value={notes} onChange={event => updateField("notes", event.target.value)} maxLength={20000} disabled={readOnly} placeholder="Decisions, open questions, and context worth keeping…" /></label><p className="form-hint">Diagram, project details, and notes are saved together after a short pause.</p></div></section><section className="details-panel"><h2><Clock3 size={17} />Design context</h2><h3>Explicit assumptions</h3><ul className="assumptions-list">{project.graph.assumptions.map((assumption, index) => <li key={index}>{assumption}</li>)}</ul><div className="history-heading"><h3>Saved versions</h3><button className="text-link" onClick={() => void loadHistory()}>View recent versions</button></div>{history && <ol className="version-list">{history.map(version => <li key={version.revision}><span>v{version.revision}</span><strong>{version.change.replace("status:", "Moved to ")}</strong><time>{new Date(version.createdAt).toLocaleString()}</time></li>)}</ol>}<p className="form-hint">Every autosave creates a snapshot. Comparison and restoration are planned for Milestone 5.</p></section></div>
   </main>;
 }

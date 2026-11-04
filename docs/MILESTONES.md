@@ -68,9 +68,16 @@ No AI generation, measured performance data, or infrastructure provisioning is p
 
 ## Milestone 4 — AI workflows
 
-- [ ] Configurable backend provider integration, structured generation, schema repair, quotas and timeouts.
-- [ ] Copilot with architecture context and typed graph patches.
+- [x] Server-only Gemini integration with structured output, strict schema/graph validation, bounded output and timeout, sanitized failures, and one provider attempt per explicit user action (no automatic repair/retry).
+- [x] Persistent per-user/global daily quotas, usage records, project-scoped artifacts/conversation, and concurrent duplicate-request suppression.
+- [x] Copilot with architecture context and typed graph patches; local deterministic validation, diff, visualization, and user-approved application.
 - [x] Clearly labeled authored templates without an API key.
+
+### Milestone 4 verification evidence
+
+The AI workflow migration was applied to the verified TiDB PostgreSQL-compatible database. TLS `SELECT 1` passed. The isolated schema probe passed application DDL/repeat-run checks, row locking, eight atomic rate-limit increments, exactly three concurrent daily quota reservations, and a simultaneous identical-request probe with one winner. Unit tests: **33 passed**; typecheck, lint (zero warnings), and production build passed. The desktop offline-workbench browser check passed and confirms no Gemini request on load. The complete browser suite did **not** pass: intermittent database-backed project writes returned 503/stayed in autosave, causing 5 of 12 browser cases to fail; the live Gemini smoke case was skipped because no opted-in provider configuration is available. A focused rerun cleaned its one synthetic account, while an earlier run reported cleanup incomplete during the same transient database failures. Do not treat database TLS verification as proof of Gemini model/key access. No live Gemini request was sent and no Vercel deployment was performed.
+
+AI remains explicitly disabled locally until the owner supplies a key and independently confirms eligible no-cost access in Google AI Studio. Provider access, current account/model availability, and free-tier status remain unverified.
 
 ## Milestone 5 — intelligence
 

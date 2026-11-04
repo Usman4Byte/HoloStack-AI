@@ -42,3 +42,26 @@ export const usageEvents = app.table("usage_events", {
   id: uuid("id").primaryKey(), workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id),
   userId: uuid("user_id").notNull().references(() => users.id), kind: text("kind").notNull(), createdAt: time("created_at"),
 }, t => [index("usage_workspace_idx").on(t.workspaceId, t.createdAt)]);
+
+export const aiQuotaCounters = app.table("ai_quota_counters", {
+  key: text("quota_key").primaryKey(), day: text("day_key").notNull(), used: integer("used").notNull(), createdAt: time("created_at"),
+}, t => [index("ai_quota_day_idx").on(t.day)]);
+export const aiUsageRecords = app.table("ai_usage_records", {
+  id: uuid("id").primaryKey(), workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id),
+  userId: uuid("user_id").notNull().references(() => users.id), projectId: uuid("project_id").references(() => projects.id),
+  feature: text("feature").notNull(), model: text("model").notNull(), status: text("status").notNull(),
+  errorCode: text("error_code"), inputTokens: integer("input_tokens"), outputTokens: integer("output_tokens"),
+  createdAt: time("created_at"), completedAt: timestamp("completed_at", { withTimezone: true }),
+}, t => [index("ai_usage_user_time_idx").on(t.userId, t.createdAt), index("ai_usage_workspace_time_idx").on(t.workspaceId, t.createdAt)]);
+export const aiArtifacts = app.table("ai_artifacts", {
+  id: uuid("id").primaryKey(), usageId: uuid("usage_id").notNull().references(() => aiUsageRecords.id),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id), userId: uuid("user_id").notNull().references(() => users.id),
+  projectId: uuid("project_id").notNull().references(() => projects.id), kind: text("kind").notNull(), payload: jsonb("payload").notNull(),
+  createdAt: time("created_at"),
+}, t => [index("ai_artifacts_project_time_idx").on(t.projectId, t.createdAt)]);
+export const aiMessages = app.table("ai_messages", {
+  id: uuid("id").primaryKey(), workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id),
+  userId: uuid("user_id").notNull().references(() => users.id), projectId: uuid("project_id").notNull().references(() => projects.id),
+  usageId: uuid("usage_id").notNull().references(() => aiUsageRecords.id), role: text("role").notNull(), content: text("content").notNull(),
+  createdAt: time("created_at"),
+}, t => [index("ai_messages_project_time_idx").on(t.projectId, t.createdAt)]);

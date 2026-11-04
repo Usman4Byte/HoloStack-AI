@@ -1,10 +1,10 @@
 # TiDB verification and persistence decision
 
-Verified on 2026-11-03 and rechecked on 2026-11-04 against the user's actual PostgreSQL-compatible TiDB Cloud Starter instance in `us-east-1`, using the `holostackdb` database. The reviewed `0000_workspace_foundation.sql` migration has been applied to the `holostack` schema after disposable-schema verification. Re-running the migration verified its hash and safely skipped already-applied DDL.
+Verified on 2026-11-03 and rechecked on 2026-11-04 against the user's actual PostgreSQL-compatible TiDB Cloud Starter instance in `us-east-1`, using the `holostackdb` database. The reviewed `0000_workspace_foundation.sql` and additive `0001_ai_workflows.sql` migrations have been applied to the `holostack` schema after disposable-schema verification. Re-running the migrations verified their hashes and safely skipped already-applied DDL.
 
 ## Evidence
 
-`npm run db:check` passed a real `SELECT 1` through `pg` with certificate verification enabled. `npm run db:verify` passed all 13 checks and cleaned up its randomly named probe schema. Before applying the first app migration, `npm run db:verify-schema` exercised the exact DDL, repeated the Drizzle ledger, validated `FOR UPDATE`, and ran eight concurrent atomic counter updates in a separate disposable schema; it cleaned up that scratch schema. The checked-in migration was then applied to the real database:
+`npm run db:check` passed a real `SELECT 1` through `pg` with certificate verification enabled. `npm run db:verify` passed all 13 checks and cleaned up its randomly named probe schema. Before applying the AI-workflow migration, `npm run db:verify-schema` exercised both exact migrations, repeated the Drizzle ledger, validated `FOR UPDATE`, ran eight concurrent atomic counter updates, and ran eight concurrent AI quota reservations in a separate disposable schema; exactly three user reservations succeeded and the scratch schema was removed. The checked-in migration was then applied to the real database:
 
 | Capability | Observed result |
 | --- | --- |
@@ -26,7 +26,7 @@ The full local evidence is `.local/db-verification.json`; exact application DDL 
 
 ## Selected implementation
 
-Use **Drizzle ORM with its node-postgres adapter**, over the server-only bounded `pg` pool. Use explicit, reviewed SQL migration files and the tested Drizzle migration ledger. Do not use automatic schema push or rely on unverified catalog introspection. The first application migration was reviewed, applied in Milestone 2, and rechecked safely. Before adding migrations or changing database targets, repeat the actual connection, compatibility, exact-DDL, and migration review steps. `npm run db:migrate` checks the target, report freshness, and migration hash before running.
+Use **Drizzle ORM with its node-postgres adapter**, over the server-only bounded `pg` pool. Use explicit, reviewed SQL migration files and the tested Drizzle migration ledger. Do not use automatic schema push or rely on unverified catalog introspection. The foundation migration was applied in Milestone 2; the additive AI-workflow migration was verified in scratch and applied in Module 4. Before adding migrations or changing database targets, repeat the actual connection, compatibility, exact-DDL, and migration review steps. `npm run db:migrate` checks the target, report freshness, and migration hash before running.
 
 Use application-generated UUIDs, ordinary foreign keys, B-tree indexes, JSONB graph documents, and revision-conditional writes. Proposed workspace/auth/project schema is in `ARCHITECTURE.md`. Keep DDL under one controlled operator, not concurrent serverless requests.
 
@@ -35,7 +35,7 @@ Use application-generated UUIDs, ordinary foreign keys, B-tree indexes, JSONB gr
 - True SERIALIZABLE isolation is not supported according to provider documentation. No application behavior may depend on it.
 - Probe cleanup drops child tables before parent tables, without CASCADE, following the provider's foreign-key dependency caveat.
 - pg query timeout limits client waiting; it is not proof of cancellation of server-side work. Add and verify server statement/lock timeouts for production operations.
-- Row locking and an eight-writer atomic counter probe passed. Broader production transaction races, fleet-wide connection saturation, high-volume pagination, DDL failure recovery, backup/restore, and production traffic remain untested.
+- Row locking and concurrent quota reservation passed in the scratch schema; eight simultaneous reservations produced exactly three successful user slots. Broader production transaction races, fleet-wide connection saturation, high-volume pagination, DDL failure recovery, backup/restore, and production traffic remain untested.
 - Do not assume extensions, triggers, vector operations, special index types, introspection tools, or pg_dump/pg_restore work merely because the basic probe passed.
 - The report binds to host/port/database/role, not a password. Rotating a password does not change target identity. Re-run checks after provider changes or dependency upgrades.
 
