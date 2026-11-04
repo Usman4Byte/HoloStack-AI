@@ -1,5 +1,7 @@
 # HoloStack AI — AI Usage Audit
 
+This report records the original audit snapshot. For current model routing, failover, and live verification, see [AI integration](docs/AI_INTEGRATION.md).
+
 **Audit snapshot:** 2026-11-04
 **Live Gemini calls made during audit:** 0
 **Current provider verification:** Not performed; project-specific credentials, billing state, model availability, and quota were not inspected.

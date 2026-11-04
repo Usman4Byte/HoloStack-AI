@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { fixtureEmail, fixturePassword } from "./fixtures";
 
 test("private architecture studio stays useful with AI disabled and makes no generation call on load", async ({ page }) => {
-  test.skip(process.env.GEMINI_ENABLED === "true" && process.env.GEMINI_FREE_TIER_CONFIRMED === "true" && Boolean(process.env.GEMINI_API_KEY), "This test targets the explicit no-AI mode; live AI smoke coverage is in its own one-request test.");
+  test.skip(process.env.HOLOSTACK_LIVE_AI_SMOKE === "true", "This test uses the default offline Playwright server.");
   const generationCalls: string[] = [];
   page.on("request", request => { if (request.url().includes("/api/ai/generate") || request.url().includes("/api/ai/assistant")) generationCalls.push(request.url()); });
   await page.goto("/signup");

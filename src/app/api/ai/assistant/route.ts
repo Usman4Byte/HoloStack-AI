@@ -4,7 +4,7 @@ import { requireActor, requireWriter } from "@/server/auth/session";
 import { clientAddress, rateLimit } from "@/server/auth/rate-limit";
 import { api, assertSameOrigin, json, readJson } from "@/server/http/request";
 export const runtime = "nodejs";
-export const maxDuration = 35;
+export const maxDuration = 240;
 export async function POST(request: Request) {
   return api(async () => {
     assertSameOrigin(request);

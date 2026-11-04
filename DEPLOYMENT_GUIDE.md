@@ -36,8 +36,7 @@ Set variables in the Vercel project environment UI or approved secret manager. U
 | `GEMINI_API_KEY` | Optional server-only key. Leave unset unless the project is verified for no-cost access and its data-use terms are accepted. |
 | `GEMINI_ENABLED` | Keep `false` until the model, billing state, quota, and data-sharing behavior are verified. |
 | `GEMINI_FREE_TIER_CONFIRMED` | Keep `false` until an operator confirms eligible access and no billing-enabled paid path. |
-| `GEMINI_MODEL` | Optional allow-listed model override; default is `gemini-3.8-flash`. |
-| `GEMINI_LIGHT_MODEL` | Optional allow-listed question model; default is `gemini-3.5-flash-lite`. |
+| `GEMINI_MODELS` | Comma-separated, ordered pool of verified generation models. See [AI integration](docs/AI_INTEGRATION.md#explicit-configuration) for the current pool. |
 
 Never use a `NEXT_PUBLIC_*` variable for a database URL, CA certificate, auth secret, or AI key. Do not put secrets into build arguments or `vercel.json`. AI remains unavailable unless the key and both explicit opt-in flags are enabled. Review [AI_USAGE_AUDIT.md](AI_USAGE_AUDIT.md) before enabling it.
 

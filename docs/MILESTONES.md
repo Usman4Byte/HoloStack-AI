@@ -116,7 +116,7 @@ P1/P2 modules remain roadmap-only; see `ARCHITECTURE.md`.
 - [x] Tighten production origin configuration so production requires an explicit HTTPS `APP_URL`.
 - [x] Capture and visually inspect the public page at 375, 768, 1440, and 1920 CSS pixels. No document-level horizontal overflow was observed.
 - [x] Add release, AI usage, deployment, and limitation reports at the repository root.
-- [ ] Verify a live Gemini request; intentionally deferred until the owner confirms provider project access, no-cost quota/billing state, and consent to provider data handling.
+- [x] Verify successful live Gemini generation. On 2026-11-04, four consecutive synthetic generation actions passed on the local production build. TiDB attempt records confirmed round robin wraparound and successful fallback. See [AI integration verification](AI_INTEGRATION.md#current-verification-boundary).
 - [ ] Verify provider-managed backup restore, external uptime/error monitoring, and a Vercel deployment. These require separate production resources and release authorization.
 
 ### Audit evidence

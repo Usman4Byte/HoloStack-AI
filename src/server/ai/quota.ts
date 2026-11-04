@@ -1,6 +1,6 @@
 import "server-only";
-import { createHmac, randomUUID } from "node:crypto";
-import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { createHash, createHmac, randomUUID } from "node:crypto";
+import { and, asc, count, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import type { z } from "zod";
 import { getDb } from "@/server/db";
 import { boundedDailyLimit, exceededDailyQuota } from "@/domain/ai/schema";
@@ -28,18 +28,19 @@ export async function aiUsage(actor: Actor) {
   return { ...aiStatus(), limits, user: { used: userUsed, remaining: Math.max(0, limits.perUser - userUsed) }, application: { used: globalUsed, remaining: Math.max(0, limits.global - globalUsed) }, resetsAt: new Date(new Date(`${day}T00:00:00.000Z`).getTime() + 86400000).toISOString() };
 }
 
-export async function reserveAIAction(actor: Actor, projectId: string, feature: "generate" | "copilot" | "optimize", fingerprint: string, lightweight = false) {
+export async function reserveAIAction(actor: Actor, projectId: string, feature: "generate" | "copilot" | "optimize", fingerprint: string) {
   const db = getDb(), day = utcDay(), limits = dailyAILimits(), now = new Date();
   const config = aiConfiguration();
   if (!config.ready) throw new ApiError(503, aiStatus().message ?? "Live AI is not configured.", "AI_NOT_CONFIGURED");
-  const model = lightweight ? config.lightModel : config.model;
+  const models = config.models;
+  const rotationKey = `gemini-rotation:${createHash("sha256").update(models.join(",")).digest("hex")}`;
   const keys = [globalCounterKey(day), userCounterKey(actor.id, day)].sort();
   const secret = process.env.AUTH_SECRET;
   if (!secret || secret.length < 32) throw new ApiError(503, "AI quota protection is not configured.", "AI_QUOTA_UNAVAILABLE");
   const requestLockKey = createHmac("sha256", secret).update(`ai-request:${actor.id}:${projectId}:${feature}:${fingerprint}`).digest("hex");
   const usageId = randomUUID();
   return db.transaction(async tx => {
-    const expiresAt = new Date(now.getTime() + 60_000);
+    const expiresAt = new Date(now.getTime() + 300_000);
     const insertedLock = await tx.insert(rateLimits).values({ key: requestLockKey, attempts: 1, expiresAt }).onConflictDoNothing().returning({ key: rateLimits.key });
     if (!insertedLock.length) {
       const [existingLock] = await tx.select().from(rateLimits).where(eq(rateLimits.key, requestLockKey)).for("update");
@@ -57,14 +58,34 @@ export async function reserveAIAction(actor: Actor, projectId: string, feature: 
     }
     const [project] = await tx.select({ id: projects.id }).from(projects).where(and(eq(projects.id, projectId), eq(projects.workspaceId, actor.workspaceId), eq(projects.status, "active"))).limit(1);
     if (!project) throw new ApiError(404, "Active project not found.", "PROJECT_NOT_FOUND");
+    const [cursor] = await tx.insert(aiQuotaCounters).values({ key: rotationKey, day: "rotation", used: 0, createdAt: now })
+      .onConflictDoUpdate({ target: aiQuotaCounters.key, set: { used: sql`(${aiQuotaCounters.used} + 1) % ${models.length}` } })
+      .returning({ index: aiQuotaCounters.used });
+    const orderedModels = [...models.slice(cursor.index), ...models.slice(0, cursor.index)];
     for (const row of rows) await tx.update(aiQuotaCounters).set({ used: sql`${aiQuotaCounters.used} + 1` }).where(eq(aiQuotaCounters.key, row.key));
-    await tx.insert(aiUsageRecords).values({ id: usageId, workspaceId: actor.workspaceId, userId: actor.id, projectId, feature, model, status: "started", errorCode: null, inputTokens: null, outputTokens: null, createdAt: now, completedAt: null });
-    return { usageId, model, requestLockKey };
+    await tx.insert(aiUsageRecords).values(attemptRecord(actor, projectId, feature, orderedModels[0], usageId, now));
+    return { usageId, models: orderedModels, requestLockKey, expiresAt };
   });
 }
 
-export async function releaseAIRequestLock(key: string) {
-  await getDb().delete(rateLimits).where(eq(rateLimits.key, key));
+function attemptRecord(actor: Actor, projectId: string, feature: "generate" | "copilot" | "optimize", model: string, id: string, createdAt: Date) {
+  return { id, workspaceId: actor.workspaceId, userId: actor.id, projectId, feature, model, status: "started", createdAt };
+}
+
+export async function reserveAIFallback(actor: Actor, projectId: string, feature: "generate" | "copilot" | "optimize", model: string) {
+  const day = utcDay(), key = globalCounterKey(day), now = new Date(), usageId = randomUUID();
+  return getDb().transaction(async tx => {
+    await tx.insert(aiQuotaCounters).values({ key, day, used: 0, createdAt: now }).onConflictDoNothing();
+    const [counter] = await tx.update(aiQuotaCounters).set({ used: sql`${aiQuotaCounters.used} + 1` })
+      .where(and(eq(aiQuotaCounters.key, key), lt(aiQuotaCounters.used, dailyAILimits().global))).returning({ key: aiQuotaCounters.key });
+    if (!counter) throw new ApiError(429, "The application’s AI allowance is used for today. It resets at 00:00 UTC.", "AI_DAILY_QUOTA");
+    await tx.insert(aiUsageRecords).values(attemptRecord(actor, projectId, feature, model, usageId, now));
+    return usageId;
+  });
+}
+
+export async function releaseAIRequestLock(key: string, expiresAt: Date) {
+  await getDb().delete(rateLimits).where(and(eq(rateLimits.key, key), eq(rateLimits.expiresAt, expiresAt)));
 }
 
 export async function finishAIAction(input: { usageId: string; status: "succeeded" | "failed"; errorCode?: string; inputTokens?: number | null; outputTokens?: number | null }) {

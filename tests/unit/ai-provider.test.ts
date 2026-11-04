@@ -21,6 +21,7 @@ describe("server Gemini provider boundary", () => {
     vi.stubEnv("GEMINI_API_KEY", "unit-test-key-that-is-not-real");
     vi.stubEnv("GEMINI_ENABLED", "true");
     vi.stubEnv("GEMINI_FREE_TIER_CONFIRMED", "true");
+    vi.stubEnv("GEMINI_MODELS", undefined);
     vi.stubEnv("GEMINI_MODEL", "gemini-2.5-flash");
     vi.stubEnv("GEMINI_LIGHT_MODEL", "gemini-2.5-flash-lite");
     sdk.generate.mockReset();
@@ -36,14 +37,21 @@ describe("server Gemini provider boundary", () => {
     expect(aiConfiguration().ready).toBe(false);
   });
 
-  it("defaults to current stable Flash models and routes a lightweight question to Flash-Lite", async () => {
+  it("defaults to the verified generation pool and uses the model selected by the caller", async () => {
     vi.stubEnv("GEMINI_MODEL", "");
     vi.stubEnv("GEMINI_LIGHT_MODEL", "");
-    expect(aiConfiguration()).toMatchObject({ model: "gemini-3.8-flash", lightModel: "gemini-3.5-flash-lite", ready: true });
+    expect(aiConfiguration()).toMatchObject({ models: ["gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.5-flash"], ready: true });
     sdk.generate.mockResolvedValue({ text: JSON.stringify({ answer: "A grounded answer.", changes: [], tradeoffs: [] }) });
-    const result = await generateStructured({ prompt: "Explicit mocked question", schema: assistantResultSchema, feature: "copilot", maxOutputTokens: 300, lightweight: true });
-    expect(result.model).toBe("gemini-3.5-flash-lite");
-    expect(sdk.generate.mock.calls[0][0].model).toBe("gemini-3.5-flash-lite");
+    const result = await generateStructured({ prompt: "Explicit mocked question", schema: assistantResultSchema, feature: "copilot", maxOutputTokens: 300, model: "gemini-3.6-flash" });
+    expect(result.model).toBe("gemini-3.6-flash");
+    expect(sdk.generate.mock.calls[0][0].model).toBe("gemini-3.6-flash");
+  });
+
+  it("preserves the configured order, removes duplicates, and rejects embedding models", () => {
+    vi.stubEnv("GEMINI_MODELS", "gemini-3.6-flash, gemini-3.5-flash-lite,gemini-3.6-flash");
+    expect(aiConfiguration().models).toEqual(["gemini-3.6-flash", "gemini-3.5-flash-lite"]);
+    vi.stubEnv("GEMINI_MODELS", "gemini-3.6-flash,gemini-embedding-2");
+    expect(aiConfiguration().ready).toBe(false);
   });
 
   it("fails closed without making a Gemini request when live AI is disabled", async () => {
@@ -61,6 +69,8 @@ describe("server Gemini provider boundary", () => {
     expect(request.model).toBe("gemini-2.5-flash");
     expect(request.config.responseMimeType).toBe("application/json");
     expect(request.config.responseJsonSchema.type).toBe("object");
+    expect(request.config.responseJsonSchema).not.toHaveProperty("$schema");
+    expect(request.config.responseJsonSchema.properties.nodes.items.properties.id).not.toHaveProperty("pattern");
     expect(request.config.maxOutputTokens).toBe(5000);
     expect((sdk.clientOptions as { httpOptions: { timeout: number; retryOptions: { attempts: number } } }).httpOptions).toEqual({ timeout: 25_000, retryOptions: { attempts: 1 } });
   });

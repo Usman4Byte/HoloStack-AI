@@ -5,7 +5,7 @@ import { generateArchitecture } from "@/server/ai/service";
 import { ApiError } from "@/server/http/errors";
 import { api, assertSameOrigin, json, readJson } from "@/server/http/request";
 export const runtime = "nodejs";
-export const maxDuration = 35;
+export const maxDuration = 240;
 export async function POST(request: Request) {
   return api(async () => {
     assertSameOrigin(request);

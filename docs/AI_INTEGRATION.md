@@ -16,17 +16,20 @@ Copy settings into `.env.local` without putting the key in chat, source control,
 GEMINI_API_KEY=
 GEMINI_ENABLED=false
 GEMINI_FREE_TIER_CONFIRMED=false
-GEMINI_MODEL=gemini-3.8-flash
-GEMINI_LIGHT_MODEL=gemini-3.5-flash-lite
+GEMINI_MODELS=gemini-3.5-flash-lite,gemini-3.6-flash,gemini-3.5-flash
 AI_DAILY_USER_LIMIT=3
 AI_DAILY_GLOBAL_LIMIT=30
 ```
 
-The service remains disabled unless the key, `GEMINI_ENABLED=true`, and `GEMINI_FREE_TIER_CONFIRMED=true` are all present. Defaults are Gemini 3.8 Flash for generation/change/optimization and Gemini 3.5 Flash-Lite for open-ended questions. The allow-list also retains Gemini 2.5 Flash and Flash-Lite for existing projects with confirmed access, but Google currently limits 2.5-model access to projects that actively used them; new projects should use current stable models. A setting outside the allow-list fails closed and never triggers a fallback. Limits may be lowered but cannot exceed three actions per authenticated user and thirty for the whole app per UTC day. Daily reservations use transaction-scoped row locks in TiDB; the rate limiter also limits each user to three AI actions per minute. Failed provider attempts consume an app action so retries cannot evade the budget. The Google SDK makes one attempt, with a 25-second timeout; retries require a new user action and another quota slot.
+The service requires the key and both flags set to `true`. `GEMINI_MODELS` sets the generation pool in order. An unsupported ID disables the pool. If the new setting is absent, existing `GEMINI_MODEL` and `GEMINI_LIGHT_MODEL` values form the pool for backward compatibility.
+
+An atomic TiDB cursor selects the starting model for each action and wraps at the end of the pool. It advances once per action and is shared across server instances. On provider failure or invalid model output, HoloStack tries each remaining model in order, at most once per model and up to 25 seconds per attempt. The caller receives the first validated result or a single error when the pool is exhausted. A local quota or storage failure stops the request immediately.
+
+The daily app budget allows up to three actions per user and 30 provider attempts across the app. Every model attempt, including a fallback, reserves a shared quota slot and records its own outcome. Limits reset at midnight UTC and can be lowered. The existing per-minute user rate limit still applies. The two AI routes allow up to 240 seconds to accommodate failover. Enable Fluid Compute on Vercel Hobby. [Vercel function duration](https://vercel.com/docs/functions/configuring-functions/duration)
 
 Model IDs and structured-output support are checked against Google's current model and structured-output documentation at audit time: https://ai.google.dev/gemini-api/docs/models and https://ai.google.dev/gemini-api/docs/structured-output. A model's published free-tier pricing does not prove that a particular API project has access or a usable request quota. Confirm the selected project's billing state and model quota before enabling the opt-in flags. The app allow-list intentionally includes only models that can use the intended free Standard tier; it does not use paid Priority/Flex modes, tools, grounding, or automatic paid fallback.
 
-Do not enable the flags until the Google AI Studio project associated with the key shows free-tier access and has no billing account enabled. HoloStack cannot inspect the account's billing status. A free-tier model ID is not by itself a guarantee against charges if Google billing is enabled. Google documents Gemini API free-tier token pricing but actual model access and request quotas vary by project; check the project-specific quota page in AI Studio. The model/key is deliberately not probed on page load. The first explicit user action verifies whether the selected model is actually available to that key; an unavailable model produces a safe error and no automatic fallback.
+Confirm in Google AI Studio that the project's tier is Free and no billing account is linked before enabling the flags. Project-specific quota and model access can vary. HoloStack contacts Gemini when a user submits a consented AI action or an operator explicitly runs a provider check.
 
 The Google AI Studio free tier may use submitted content to improve Google products. HoloStack displays this before every AI action. Do not submit credentials, customer data, or confidential designs unless that data sharing is acceptable to you.
 
@@ -35,13 +38,41 @@ The Google AI Studio free tier may use submitted content to improve Google produ
 - `GET /api/ai/status`, `GET /api/ai/conversation`, and `GET /api/ai/artifacts` do not call Google. They require an authenticated owner and scope all project data to the current workspace.
 - `POST /api/ai/generate` and `POST /api/ai/assistant` require a session, owner/editor role, same-origin request, bounded Zod input, explicit consent, rate limit, and a transactionally reserved user/application quota slot.
 - No provider call is made from browser code. `server-only` protects the provider module.
-- Invalid, oversized, or graph-invalid model responses are rejected. No automatic JSON repair request is sent; the user may explicitly retry and see the next action consume quota.
-- Provider 429, 503, missing-key, invalid-key, and unavailable-model errors map to safe user-facing messages. Raw provider messages and prompt content are not returned or logged.
+- HoloStack validates JSON and graph integrity before saving a candidate. Invalid output can trigger a fallback to a different configured model.
+- Model failures are recorded per attempt using sanitized codes. Individual failures stay out of the user response when a later model succeeds.
 - No model calls run on load, autosave, canvas actions, template selection, report export, risk review, or slider movement. ScaleLab and deterministic review are local TypeScript operations; saving a scenario is an authenticated database write and does not invoke a model.
-- No production provider smoke test is run by default. `tests/e2e/ai-live-smoke.spec.ts` makes exactly one quota-metered generation request only when all explicit key/free-tier flags are set; otherwise it is skipped. Unit tests use a mocked SDK and never consume provider quota.
+- Playwright disables live AI by default, even when local Gemini is enabled. The desktop smoke test requires `HOLOSTACK_LIVE_AI_SMOKE=true` as well as the key and both app opt-in flags. It submits one synthetic generation action that may use failover. Unit tests use a mocked SDK.
+
+To run the focused smoke test in PowerShell after confirming the Google project tier:
+
+```powershell
+npm run build
+$env:HOLOSTACK_LIVE_AI_SMOKE = "true"
+try {
+  npx playwright test tests/e2e/ai-live-smoke.spec.ts --project=desktop
+} finally {
+  Remove-Item Env:HOLOSTACK_LIVE_AI_SMOKE
+}
+```
 
 ## Current verification boundary
 
-The app schema migration is additive and the exact migration was exercised in a randomly named TiDB scratch schema before applying it. Eight concurrent reservations against the quota-counter logic allow exactly three requests for a test user. Whether this local Google AI Studio key can access the configured models can only be verified after the key and free-tier confirmation are configured; a successful first generation (or the explicitly enabled one-request smoke test) is the provider verification. Do not describe Gemini as verified before that succeeds.
+On 2026-11-04 the owner confirmed Free Tier with no billing account linked. The following tests used short synthetic inputs against the project's Gemini API key.
 
-ScaleLab, deterministic risk rules, architecture history comparison/restoration, and Markdown reporting are delivered in Module 5. AI optimization remains a user-requested proposal; deterministic validation and simulation run locally after it returns. No performance improvement is measured or promised.
+| Model | Live result | Routing |
+|---|---|---|
+| Gemini 3.1 Flash-Lite | HTTP 503 | Excluded |
+| Gemini 3.5 Flash-Lite | Passed HoloStack's architecture schema | First in pool |
+| Gemini 2.5 Flash-Lite | HTTP 404 from generation | Excluded |
+| Gemini Embedding 1 | Returned an embedding vector | Embeddings only |
+| Gemini Embedding 2 | Returned an embedding vector | Embeddings only |
+| Gemini 3 Flash Preview | Basic JSON passed, architecture probe timed out | Excluded |
+| Gemini 2.5 Flash | HTTP 404 from generation | Excluded |
+| Gemini 3.6 Flash | Passed HoloStack's architecture schema | Second in pool |
+| Gemini 3.8 Flash | HTTP 503 from generation; earlier app smoke recorded HTTP 504 | Excluded |
+| Gemini 3.5 Flash | Passed HoloStack's architecture schema | Third in pool |
+| Gemini 3.7 Flash | HTTP 503 | Excluded |
+
+Initial app requests using the raw Zod-to-JSON-Schema output failed across the first pool. The provider now sends a simplified schema while the application enforces the original strict schema and graph integrity checks on the response. The model checks use the same simplified schema and validate each result with the full local schema. [Google structured output](https://ai.google.dev/gemini-api/docs/structured-output)
+
+Four consecutive live requests against the local production build all returned validated HoloCanvas graphs. The TiDB attempt records showed starting models in this order: 3.5 Flash-Lite, 3.6 Flash, 3.5 Flash, then 3.5 Flash-Lite again. Two of the actions succeeded after fallback. Each configured model produced a valid app response at least once. The slowest of these four tests took about 60 seconds with failover and database operations.

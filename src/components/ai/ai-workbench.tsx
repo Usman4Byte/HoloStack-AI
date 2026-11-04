@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 
 type Mode = "generate" | "copilot" | "optimize";
 type Intent = "ask" | "change";
-type Status = { enabled: boolean; configured: boolean; model: string | null; message: string | null; limits: { perUser: number; global: number }; user: { used: number; remaining: number }; application: { used: number; remaining: number }; resetsAt: string };
+type Status = { enabled: boolean; configured: boolean; models: string[]; message: string | null; limits: { perUser: number; global: number }; user: { used: number; remaining: number }; application: { used: number; remaining: number }; resetsAt: string };
 type Candidate = { graph: Architecture; tradeoffs: string[]; artifactId?: string };
 type AssistantResult = { answer: string; changes: { operation: string; targetId: string }[]; tradeoffs: string[]; candidate: Architecture | null; model: string; artifactId?: string };
 type SavedArtifact =
@@ -113,8 +113,8 @@ export function AIWorkbench({ projectId, graph, disabled, onApply }: { projectId
     <div className="ai-workbench-head"><div><span className="eyebrow"><Sparkles size={13} /> HOLOSTACK AI · USER-REQUESTED REASONING</span><h2>Design with intelligence.</h2><p>AI proposes. You review. Deterministic code validates. Your approval is required to apply. The API key/model is checked only on your first explicit AI action, never on page load.</p></div><div className={`ai-provider-state ${status?.enabled ? "ready" : "offline"}`}><span />{status?.enabled ? providerVerified ? "GEMINI VERIFIED" : "GEMINI CONFIGURED" : "AI OFF"}</div></div>
     <div className="ai-workbench-meta" aria-live="polite">
       <span><Network size={14} /> {graph.nodes.length} current components in context</span>
-      {status ? <span>{status.user.remaining}/{status.limits.perUser} daily actions left · {status.application.remaining}/{status.limits.global} app actions</span> : <span>{statusError || "Checking daily allowance…"}</span>}
-      {status?.model && <span className="ai-model-tag">{status.model}</span>}
+      {status ? <span>{status.user.remaining}/{status.limits.perUser} daily actions left · {status.application.remaining}/{status.limits.global} app model attempts</span> : <span>{statusError || "Checking daily allowance…"}</span>}
+      {status?.enabled && <span className="ai-model-tag" title={status.models.join(", ")}>{status.models.length} Gemini {status.models.length === 1 ? "model" : "models"}</span>}
     </div>
     {!status?.enabled && <div className="ai-offline-message" role="status"><CircleAlert size={17} /><div><strong>Live AI is not configured.</strong><span>{statusError || status?.message || "To use Gemini: add GEMINI_API_KEY locally, verify your AI Studio project's free-tier access and that billing is not enabled, then set GEMINI_FREE_TIER_CONFIRMED=true and GEMINI_ENABLED=true. No Gemini request is made until you submit an action."}</span></div></div>}
     <div className="ai-tabs" role="tablist" aria-label="AI workflows">{modeOptions.map(option => { const Icon = option.icon; return <button key={option.id} role="tab" aria-selected={mode === option.id} className={mode === option.id ? "selected" : ""} onClick={() => { setMode(option.id); setNotice(""); setGeneration(null); setProposal(null); }}><Icon size={15} />{option.label}</button>; })}</div>
@@ -122,7 +122,7 @@ export function AIWorkbench({ projectId, graph, disabled, onApply }: { projectId
     {artifacts.length > 0 && <div className="ai-saved-candidates"><span>RECENT SAVED CANDIDATES · ZERO AI REQUESTS</span>{artifacts.map(artifact => <button key={artifact.id} type="button" onClick={() => reopenArtifact(artifact)}><strong>{artifact.kind === "generation" ? artifact.payload.graph.name : artifact.payload.candidate?.name ?? "Saved proposal"}</strong><small>{artifact.kind === "generation" ? "Architecture generation" : artifact.payload.mode === "optimize" ? "Optimization proposal" : "Copilot proposal"} · {new Date(artifact.createdAt).toLocaleDateString()}</small></button>)}</div>}
     {mode === "generate" ? <form className="ai-form" onSubmit={generate}>
       <label htmlFor="ai-requirements">What are you building?<textarea id="ai-requirements" value={requirements} onChange={event => setRequirements(event.target.value)} maxLength={4000} minLength={10} required disabled={!status?.enabled || disabled || busy} placeholder="Design an AI SaaS chatbot for 100,000 users. Include a web application, tenant-aware auth, retrieval over private documents, and resilient background ingestion. Prefer a simple first release with a clear path to scale." /></label>
-      <div className="ai-form-footer"><span>{requirements.length}/4,000 characters · One explicit Gemini request</span><Button type="submit" disabled={!canRequest || requirements.trim().length < 10}>{busy ? <><LoaderCircle className="ai-spin" size={15} />Generating…</> : <><Sparkles size={15} />Generate architecture</>}</Button></div>
+      <div className="ai-form-footer"><span>{requirements.length}/4,000 characters · Gemini may try another model</span><Button type="submit" disabled={!canRequest || requirements.trim().length < 10}>{busy ? <><LoaderCircle className="ai-spin" size={15} />Generating…</> : <><Sparkles size={15} />Generate architecture</>}</Button></div>
     </form> : <form className="ai-form" onSubmit={ask}>
       {mode === "copilot" && <div className="ai-intent-picker" aria-label="Copilot action"><button type="button" aria-pressed={intent === "ask"} className={intent === "ask" ? "selected" : ""} onClick={() => setIntent("ask")}>Ask a question</button><button type="button" aria-pressed={intent === "change"} className={intent === "change" ? "selected" : ""} onClick={() => setIntent("change")}>Propose graph changes</button></div>}
       {mode === "optimize" && <label className="ai-goal-label">Optimization goal<select value={goal} onChange={event => setGoal(event.target.value)} disabled={!status?.enabled || disabled || busy}><option value="scalability">Scalability</option><option value="reliability">Reliability</option><option value="security">Security</option><option value="simplicity">Simplicity</option><option value="cost">Cost efficiency</option></select></label>}
@@ -141,6 +141,6 @@ export function AIWorkbench({ projectId, graph, disabled, onApply }: { projectId
     </div>}
     {proposal && !proposal.candidate && <div className="ai-answer"><div className="ai-answer-head"><MessageSquareText size={15} />ARCHITECTURE RESPONSE</div><p>{proposal.answer}</p>{proposal.tradeoffs.map((item, index) => <div className="ai-candidate-note" key={index}><CircleAlert size={13} />{item}</div>)}</div>}
     {notice && <p className="ai-notice" role="status">{notice}</p>}
-    {status && <div className="ai-disclaimer"><RotateCcw size={13} />Quota resets {new Date(status.resetsAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })} UTC. One request attempt per action; manual retries consume another daily action.</div>}
+    {status && <div className="ai-disclaimer"><RotateCcw size={13} />Quota resets {new Date(status.resetsAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })} UTC. Each fallback counts toward the shared app limit. Submitting again uses another daily action.</div>}
   </section>;
 }
