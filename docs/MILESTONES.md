@@ -49,7 +49,7 @@ The DB-backed end-to-end suite passed **8/8** on desktop and mobile; this covers
 
 Unit tests: **17 passed**. `npm run typecheck`, `npm run lint`, and `npm run build` passed. A source scan across 82 tracked/untracked code, docs, and config files found zero matches for the database credential markers or API-key marker pattern. `.env.local` remains Git-ignored and was not included in the scan output. No Vercel deployment was performed.
 
-Milestone 2 application work and checks are complete locally. Changes are ready for review; the Milestone 2 update has not yet been committed or pushed.
+Milestone 2 application work and checks are complete. Commit `8c61649` was pushed to the requested private GitHub repository; the local tree is clean.
 
 ## Milestone 3 — full visual studio
 
