@@ -24,6 +24,8 @@ Verified on 2026-11-03 and rechecked on 2026-11-04 against the user's actual Pos
 
 The full local evidence is `.local/db-verification.json`; exact application DDL evidence is `.local/schema-verification.json`. These include target fingerprints, timestamps, hashes, and named checks, without credentials or host/role values. Scratch migration source is retained under ignored `.local/holostack_probe_*` folders for inspection. The check is evidence for the tested subset on this instance, not a blanket PostgreSQL-compatibility claim.
 
+The Module 6 `npm run db:verify-recovery` rehearsal copied a synthetic user/workspace/project graph, architecture version, and saved intelligence scenario from one randomly named migrated schema into a second. Canonical JSON hashes, row counts, and relationship joins matched; both schemas were removed. `.local/recovery-verification.json` records only target/migration fingerprints, entity counts, a synthetic graph hash, and pass status. This does not read customer data and does not exercise TiDB's provider-managed backup restore.
+
 ## Selected implementation
 
 Use **Drizzle ORM with its node-postgres adapter**, over the server-only bounded `pg` pool. Use explicit, reviewed SQL migration files and the tested Drizzle migration ledger. Do not use automatic schema push or rely on unverified catalog introspection. The foundation migration was applied in Milestone 2; the additive AI workflow and intelligence-run migrations were verified in scratch and applied in Modules 4 and 5. Before adding migrations or changing database targets, repeat the actual connection, compatibility, exact-DDL, and migration review steps. `npm run db:migrate` checks the target, report freshness, and migration hash before running.
@@ -35,7 +37,7 @@ Use application-generated UUIDs, ordinary foreign keys, B-tree indexes, JSONB gr
 - True SERIALIZABLE isolation is not supported according to provider documentation. No application behavior may depend on it.
 - Probe cleanup drops child tables before parent tables, without CASCADE, following the provider's foreign-key dependency caveat.
 - pg query timeout limits client waiting; it is not proof of cancellation of server-side work. Add and verify server statement/lock timeouts for production operations.
-- Row locking and concurrent quota reservation passed in the scratch schema; eight simultaneous reservations produced exactly three successful user slots. Broader production transaction races, fleet-wide connection saturation, high-volume pagination, DDL failure recovery, backup/restore, and production traffic remain untested.
+- Row locking and concurrent quota reservation passed in the scratch schema; eight simultaneous reservations produced exactly three successful user slots. Synthetic application export/restore across isolated schemas passed. Broader production transaction races, fleet-wide connection saturation, high-volume pagination, DDL failure recovery, provider-managed backup restore, and production traffic remain untested.
 - Do not assume extensions, triggers, vector operations, special index types, introspection tools, or pg_dump/pg_restore work merely because the basic probe passed.
 - The report binds to host/port/database/role, not a password. Rotating a password does not change target identity. Re-run checks after provider changes or dependency upgrades.
 

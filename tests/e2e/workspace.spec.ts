@@ -81,7 +81,7 @@ test("sample studio supports editing, history, layout, JSON import, PNG export, 
   await page.screenshot({ path: testInfo.outputPath("workspace.png"), fullPage: true });
 });
 
-test("setup and liveness communicate their actual scope", async ({ page, request }) => {
+test("setup, liveness, and database readiness communicate their actual scope", async ({ page, request }) => {
   await page.goto("/setup");
   await expect(page.getByRole("heading", { name: "Connection not verified here" })).toBeVisible();
   await expect(page.getByText("npm run db:check", { exact: false })).toBeVisible();
@@ -89,6 +89,10 @@ test("setup and liveness communicate their actual scope", async ({ page, request
   expect(response.status()).toBe(200);
   expect(await response.json()).toEqual({ status: "ok", service: "holostack-ai" });
   expect(response.headers()["cache-control"]).toBe("no-store");
+  const ready = await request.get("/api/ready");
+  expect(ready.status()).toBe(200);
+  expect(await ready.json()).toEqual({ status: "ready", checks: { database: "ready", applicationSchema: "ready" } });
+  expect(ready.headers()["cache-control"]).toContain("no-store");
   expect(response.headers()["x-content-type-options"]).toBe("nosniff");
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
 });

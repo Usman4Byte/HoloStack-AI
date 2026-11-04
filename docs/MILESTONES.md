@@ -93,8 +93,18 @@ AI remains explicitly disabled locally until the owner supplies a key and indepe
 ## Milestone 6 — launch hardening and approved deployment
 
 - [x] Complete end-to-end acceptance flow from sign-in to protected-project logout.
-- [ ] Auth/persistence/AI boundary tests, rate-limit and concurrency validation, recovery rehearsal, production monitoring.
-- [ ] Marketing/onboarding polish and truthful feature availability.
+- [x] Add distinct liveness and database/application-schema readiness endpoints with sanitized failures and correct partial readiness reporting.
+- [x] Extend auth, persistence, AI-boundary, rate-limit, and concurrency validation; rehearse synthetic application recovery across isolated schemas.
+- [x] Clarify onboarding and feature availability; label local estimates, optional AI configuration, and unimplemented monitoring/deployment capabilities truthfully.
+- [ ] Configure external production uptime/error monitoring and alert ownership; test TiDB provider-managed backup restoration in a separate instance.
 - [x] Continue using the explicitly requested private GitHub repository. No Vercel deployment has been requested or performed; deployment requires separate approval.
+
+### Milestone 6 verification evidence
+
+`GET /api/health` is a database-independent liveness check. `GET /api/ready` checks a live database query and the required project/intelligence tables, returns non-cacheable readiness state, distinguishes a reachable database from a missing application schema, and logs only allow-listed error codes. The readiness route unit tests cover success and both failure boundaries. The production-browser suite passed **12/12 runnable tests** on desktop/mobile; two live Gemini tests were skipped because explicit provider opt-in credentials are absent. It exercised DB-backed auth, tenant/project boundaries, scenario persistence, offline AI behavior, and readiness against TiDB; teardown removed all 10 synthetic accounts. After refining partial readiness reporting, the focused desktop/mobile setup/liveness/readiness suite passed **4/4**.
+
+Unit tests: **45 passed** across 10 files. `npm run typecheck`, `npm run lint`, and `npm run build` passed. The real TiDB synthetic recovery rehearsal copied a fixture tenant, project graph, architecture history, and intelligence scenario between two disposable migrated schemas; canonical JSON hashes, row counts, and joins matched, and both schemas were removed. Prior exact-schema verification continues to cover concurrent rate/quota reservation and duplicate-request suppression. The browser suite logged transient TiDB `ECONNRESET` messages and recovered; connection stability still needs monitoring.
+
+The recovery rehearsal is application-level and synthetic. Provider-managed backup restoration and external production monitoring remain unverified because no separate restore instance, deployed URL, or monitor/alert owner is configured. A Vercel deployment has not been performed and still requires explicit approval.
 
 P1/P2 modules remain roadmap-only; see `ARCHITECTURE.md`.
