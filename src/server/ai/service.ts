@@ -31,6 +31,8 @@ export const modelFailureCodes = new Set([
 
 async function tracked<T extends { usage: TokenUsage }>(actor: Actor, projectId: string, feature: AIModelFeature, fingerprint: string, run: (usageId: string, model: string) => Promise<T>) {
   const reservation = await reserveAIAction(actor, projectId, feature, fingerprint);
+  const failureCodes = new Set<string>();
+  let lastFailure: ApiError | null = null;
   try {
     for (const [index, model] of reservation.models.entries()) {
       const usageId = index === 0 ? reservation.usageId : await reserveAIFallback(actor, projectId, feature, model);
@@ -40,11 +42,15 @@ async function tracked<T extends { usage: TokenUsage }>(actor: Actor, projectId:
         const code = error instanceof ApiError ? error.code : "AI_REQUEST_FAILED";
         await finishAIAction({ usageId, status: "failed", errorCode: code });
         if (!modelFailureCodes.has(code)) throw error;
+        failureCodes.add(code);
+        lastFailure = error instanceof ApiError ? error : null;
+        console.warn(`AI model attempt failed (${code}); moving to the next configured model.`);
         continue;
       }
       await finishAIAction({ usageId, status: "succeeded", ...result.usage });
       return result;
     }
+    if (failureCodes.size === 1 && lastFailure) throw lastFailure;
     throw new ApiError(503, "AI could not complete this request. Try again later.", "AI_ALL_MODELS_FAILED");
   } finally {
     try { await releaseAIRequestLock(reservation.requestLockKey, reservation.expiresAt); }

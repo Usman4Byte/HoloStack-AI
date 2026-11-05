@@ -13,15 +13,19 @@ export { guestAIUsage };
 async function withGuestModelPool<T>(address: string, run: (model: string) => Promise<T>) {
   const reservation = await reserveGuestAIAction(address);
   let lastError: unknown;
+  const failureCodes = new Set<string>();
   for (const [index, model] of reservation.models.entries()) {
     if (index > 0) await reserveGuestAIFallback();
     try { return await run(model); }
     catch (error) {
       const safeError = error instanceof ApiError ? error : friendlyProviderError(error);
       lastError = safeError;
+      failureCodes.add(safeError.code);
+      console.warn(`Guest AI model attempt failed (${safeError.code}); moving to the next configured model.`);
       if (!modelFailureCodes.has(safeError.code)) throw safeError;
     }
   }
+  if (failureCodes.size === 1 && lastError instanceof ApiError) throw lastError;
   if (lastError instanceof ApiError) throw new ApiError(503, "AI could not complete this request. Try again later.", "AI_ALL_MODELS_FAILED");
   throw new ApiError(503, "AI could not complete this request. Try again later.", "AI_ALL_MODELS_FAILED");
 }
