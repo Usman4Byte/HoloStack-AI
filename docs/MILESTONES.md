@@ -1,6 +1,6 @@
 # Build milestones
 
-Updated: 2026-11-04 (Asia/Karachi). This file distinguishes implemented functionality from the complete product brief.
+Updated: 2026-11-05 (Asia/Karachi). This file distinguishes implemented functionality from the complete product brief.
 
 ## Milestone 1 — foundation and database integration
 
@@ -113,7 +113,7 @@ P1/P2 modules remain roadmap-only; see `ARCHITECTURE.md`.
 
 - [x] Run typecheck, lint, production build, unit tests, full desktop/mobile Playwright, current TiDB connection, compatibility, and exact-schema/concurrency checks.
 - [x] Add the public deterministic ScaleLab/rule-review sample and prepared, locally authored cache comparison; verify that sample interactions make no AI-route calls.
-- [x] Tighten production origin configuration so production requires an explicit HTTPS `APP_URL`.
+- [x] Require secure production origins; 2026-11-05 follow-up adds Vercel hostname resolution for deployments with a missing/local `APP_URL`.
 - [x] Capture and visually inspect the public page at 375, 768, 1440, and 1920 CSS pixels. No document-level horizontal overflow was observed.
 - [x] Add release, AI usage, deployment, and limitation reports at the repository root.
 - [x] Verify successful live Gemini generation. On 2026-11-04, four consecutive synthetic generation actions passed on the local production build. TiDB attempt records confirmed round robin wraparound and successful fallback. See [AI integration verification](AI_INTEGRATION.md#current-verification-boundary).
@@ -181,3 +181,10 @@ Verification: typecheck, lint, `npm test` (**60/60**), and production build pass
 - [x] Show the Usman4Byte attribution and a GitHub/LinkedIn profile menu at both the top and bottom of every page.
 
 Verification: typecheck, lint, and production build passed. The UI Playwright file passed **6/6** across desktop and mobile projects. It checked landing/auth responsiveness down to 320 CSS pixels, guest dashboard overflow at 320, 360, 375, 390, 414, 430, 768, 1024, and 1440 CSS pixels, editor overflow at 320 through 768, hamburger navigation, return-to-home link, and top/footer profile links. A 375px full-page capture was visually reviewed. No database migration, AI provider call, deployment, or repository push was performed.
+
+## Production-origin and home-navigation fix — 2026-11-05
+
+- [x] Resolve Vercel production and preview HTTPS origins from Vercel system hostnames when `APP_URL` is missing or points to localhost; upgrade HTTP public `APP_URL` values on hosted Vercel deployments.
+- [x] Use full-page navigation for guest/auth HoloStack logos so returning to `/` starts at the landing page top.
+
+Verification: `npx tsc --noEmit` passed. No AI provider call was made. The production deployment and logo scroll behavior have not been rechecked in the live browser; the code changes are local until deployed.

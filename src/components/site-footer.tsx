@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Layers3 } from "lucide-react";
 
 export function DeveloperProfileMenu() {
@@ -13,7 +12,7 @@ export function DeveloperProfileMenu() {
 
 export function SiteHeader() {
   return <header className="site-author-bar">
-    <Link href="/" className="site-author-brand" aria-label="HoloStack AI home"><Layers3 size={21} /><span>HoloStack<span className="brand-ai">AI</span></span></Link>
+    <a href="/" className="site-author-brand" aria-label="HoloStack AI home"><Layers3 size={21} /><span>HoloStack<span className="brand-ai">AI</span></span></a>
     <p className="author-credit">Made by <strong>Usman</strong> (<small>Usman4Byte</small>)</p>
     <DeveloperProfileMenu />
   </header>;

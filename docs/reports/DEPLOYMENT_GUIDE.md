@@ -32,7 +32,7 @@ Set variables in the Vercel project environment UI or approved secret manager. U
 | `DATABASE_URL` | Required PostgreSQL-compatible connection string for the selected environment. Keep private. |
 | `DATABASE_CA_CERT` | Optional provider CA PEM if required by that instance. TLS verification remains enabled. |
 | `AUTH_SECRET` | Required random secret of at least 32 characters. Generate independently per environment. |
-| `APP_URL` | Required canonical HTTPS origin in production, with no path. The app fails closed when production origin is missing or insecure. |
+| `APP_URL` | Recommended canonical HTTPS origin in production, with no path. On Vercel, if unset or set to localhost, the app uses the HTTPS project production URL or deployment URL; public HTTP values are upgraded to HTTPS. Enable Vercel system environment variables. |
 | `GEMINI_API_KEY` | Optional server-only key. Leave unset unless the project is verified for no-cost access and its data-use terms are accepted. |
 | `GEMINI_ENABLED` | Keep `false` until the model, billing state, quota, and data-sharing behavior are verified. |
 | `GEMINI_FREE_TIER_CONFIRMED` | Keep `false` until an operator confirms eligible access and no billing-enabled paid path. |

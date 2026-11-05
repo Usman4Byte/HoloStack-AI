@@ -3,10 +3,32 @@ import { ApiError } from "./errors";
 
 export function appOrigin() {
   const configured = process.env.APP_URL?.trim();
-  if (process.env.NODE_ENV === "production" && !configured) throw new ApiError(503, "Application URL is not configured.", "APP_URL_REQUIRED");
-  const origin = new URL(configured || "http://localhost:3000");
-  const localHttp = origin.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(origin.hostname);
-  if (origin.protocol !== "https:" && (!localHttp || process.env.VERCEL === "1")) throw new ApiError(503, "Application URL must use HTTPS.", "APP_URL_HTTPS_REQUIRED");
+  const isVercel = process.env.VERCEL === "1";
+  const localHosts = ["localhost", "127.0.0.1", "[::1]"];
+  const productionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+  const deploymentHost = process.env.VERCEL_URL?.trim();
+  const platformHost = process.env.VERCEL_ENV === "production"
+    ? productionHost || deploymentHost
+    : deploymentHost || productionHost;
+  const platformOrigin = platformHost
+    ? new URL(/^https?:\/\//i.test(platformHost) ? platformHost : `https://${platformHost}`)
+    : undefined;
+
+  let origin = configured ? new URL(configured) : undefined;
+  const configuredIsLocal = origin !== undefined && localHosts.includes(origin.hostname);
+
+  // APP_URL in older Vercel configurations may point to localhost or use HTTP.
+  // Prefer Vercel's HTTPS deployment hostname for localhost, and upgrade HTTP
+  // custom domains because Vercel serves production deployments over HTTPS.
+  if (isVercel && (configuredIsLocal || !origin) && platformOrigin) origin = platformOrigin;
+  else if (isVercel && process.env.VERCEL_ENV !== "development" && origin?.protocol === "http:") origin.protocol = "https:";
+
+  if (!origin && process.env.NODE_ENV === "production") throw new ApiError(503, "Application URL is not configured.", "APP_URL_REQUIRED");
+  origin ??= new URL("http://localhost:3000");
+  const localHttp = origin.protocol === "http:" && localHosts.includes(origin.hostname);
+  if (origin.protocol !== "https:" && (!localHttp || (isVercel && process.env.VERCEL_ENV !== "development"))) {
+    throw new ApiError(503, "Application URL must use HTTPS.", "APP_URL_HTTPS_REQUIRED");
+  }
   return origin;
 }
 
